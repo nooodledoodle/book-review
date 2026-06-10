@@ -2023,6 +2023,93 @@
     }
   }
 
+  .book-lower-row {
+    display: grid;
+    grid-template-columns: minmax(250px, 360px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: stretch;
+    margin-top: 14px;
+  }
+  .book-lower-row .reading-calendar-panel,
+  .book-lower-row .notes-frame {
+    margin-top: 0;
+    height: 100%;
+  }
+  .reading-calendar-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .reading-calendar-panel .mini-calendar {
+    align-content: start;
+  }
+  .notes-frame textarea {
+    min-height: 260px;
+  }
+  .genre-fieldrow {
+    align-items: flex-start;
+  }
+  .genre-tags {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+  }
+  .genre-tag {
+    font-family: var(--type);
+    font-size: .72rem;
+    letter-spacing: .05em;
+    color: var(--ink);
+    background: rgba(255,255,255,.35);
+    border: 1.5px dashed var(--rule);
+    border-radius: 999px;
+    padding: 5px 10px;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 rgba(94, 50, 50, .08);
+    transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+  }
+  .genre-tag:hover {
+    transform: translateY(-1px);
+    border-color: var(--line);
+    background: #fffdf7;
+  }
+  .genre-tag.on {
+    background: var(--star-on);
+    border-style: solid;
+    border-color: var(--star-on);
+    color: #fff7f0;
+  }
+
+  @media (max-width: 760px) {
+    .book-lower-row {
+      grid-template-columns: 1fr;
+    }
+    .book-lower-row .reading-calendar-panel {
+      width: min(100%, 360px);
+      margin-left: auto;
+      margin-right: auto;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    .book-lower-row .notes-frame {
+      height: auto !important;
+      min-height: 0 !important;
+    }
+  }
+
+  @media print {
+    .book-lower-row {
+      grid-template-columns: 2.35in 1fr !important;
+      gap: .18in !important;
+      align-items: start !important;
+    }
+    .book-lower-row .reading-calendar-panel,
+    .book-lower-row .notes-frame {
+      height: auto !important;
+      min-height: 0 !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -2136,18 +2223,6 @@
           </div>
         </div>
 
-        <div class="frame reading-calendar-panel">
-          <span class="frame-label">Reading Calendar</span>
-          <div class="fieldrow calendar-month-row"><label>Month:</label><input type="month" id="readingMonth" data-key="reading_month"></div>
-          <div class="calendar-weekdays" aria-hidden="true">
-            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-          </div>
-          <div class="mini-calendar" id="readingCalendar" aria-label="Days read calendar"></div>
-          <div class="calendar-footer">
-            <span id="readingCalendarCount">0 days marked</span>
-            <button class="btn calendar-clear no-print" id="clearCalendarMonthBtn" type="button">Clear Month</button>
-          </div>
-        </div>
       </div>
 
       <!-- RIGHT COLUMN -->
@@ -2156,26 +2231,25 @@
           <span class="frame-label">Book Details</span>
           <div class="fieldrow"><label>Title:</label><input type="text" data-key="title" placeholder="the book that took over our lives"></div>
           <div class="fieldrow"><label>Author:</label><input type="text" data-key="author"></div>
-          <div class="fieldrow"><label>Genre:</label>
-            <select data-key="genre">
-              <option value="">choose a genre...</option>
-              <option>Fantasy</option>
-              <option>Romance</option>
-              <option>Romantasy</option>
-              <option>Sci-Fi</option>
-              <option>Mystery</option>
-              <option>Thriller</option>
-              <option>Horror</option>
-              <option>Historical Fiction</option>
-              <option>Literary Fiction</option>
-              <option>Contemporary</option>
-              <option>Young Adult</option>
-              <option>Classic</option>
-              <option>Non-Fiction</option>
-              <option>Memoir</option>
-              <option>Poetry</option>
-              <option>Other</option>
-            </select>
+          <div class="fieldrow genre-fieldrow"><label>Genre:</label>
+            <div class="genre-tags" id="genreTags" aria-label="Choose one or more genres">
+              <button class="genre-tag" type="button" data-genre="Fantasy">Fantasy</button>
+              <button class="genre-tag" type="button" data-genre="Romance">Romance</button>
+              <button class="genre-tag" type="button" data-genre="Romantasy">Romantasy</button>
+              <button class="genre-tag" type="button" data-genre="Sci-Fi">Sci-Fi</button>
+              <button class="genre-tag" type="button" data-genre="Mystery">Mystery</button>
+              <button class="genre-tag" type="button" data-genre="Thriller">Thriller</button>
+              <button class="genre-tag" type="button" data-genre="Horror">Horror</button>
+              <button class="genre-tag" type="button" data-genre="Historical Fiction">Historical Fiction</button>
+              <button class="genre-tag" type="button" data-genre="Literary Fiction">Literary Fiction</button>
+              <button class="genre-tag" type="button" data-genre="Contemporary">Contemporary</button>
+              <button class="genre-tag" type="button" data-genre="Young Adult">Young Adult</button>
+              <button class="genre-tag" type="button" data-genre="Classic">Classic</button>
+              <button class="genre-tag" type="button" data-genre="Non-Fiction">Non-Fiction</button>
+              <button class="genre-tag" type="button" data-genre="Memoir">Memoir</button>
+              <button class="genre-tag" type="button" data-genre="Poetry">Poetry</button>
+              <button class="genre-tag" type="button" data-genre="Other">Other</button>
+            </div>
           </div>
           <div class="fieldrow"><label>Date started:</label><input type="date" data-key="date_started"></div>
           <div class="fieldrow"><label>Date finished:</label><input type="date" data-key="date_finished"></div>
@@ -2201,12 +2275,30 @@
           </div>
         </div>
 
-        <div class="frame">
+      </div>
+    </div>
+
+    <div class="book-lower-row">
+        <div class="frame reading-calendar-panel" id="readingCalendarPanel">
+          <span class="frame-label">Reading Calendar</span>
+          <div class="fieldrow calendar-month-row"><label>Month:</label><input type="month" id="readingMonth" data-key="reading_month"></div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+          <div class="mini-calendar" id="readingCalendar" aria-label="Days read calendar"></div>
+          <div class="calendar-footer">
+            <span id="readingCalendarCount">0 days marked</span>
+            <button class="btn calendar-clear no-print" id="clearCalendarMonthBtn" type="button">Clear Month</button>
+          </div>
+        </div>
+
+      <div class="frame notes-frame" id="notesFrame">
           <span class="frame-label">Notes</span>
           <textarea class="lined" rows="8" data-key="notes"
             placeholder="little thoughts, page numbers to revisit, snacks consumed..."></textarea>
         </div>
       </div>
+    </div>
     </div>
 
     <p class="divider-heart" id="reviewDivider">&#10086; &#10086; &#10086; &nbsp;my reading journal&nbsp; &#10086; &#10086; &#10086;</p>
@@ -2365,6 +2457,7 @@
   const CFG_KEY = 'bookReviewJournal.sync';
   const MODE_KEY = 'bookReviewJournal.shelfMode';
   const THEME_KEY = 'bookReviewJournal.theme';
+  const READER_NAMES_KEY = 'bookReviewJournal.readerNames';
   const ALLOWED_THEMES = ['pink', 'sage', 'lavender', 'beige', 'orange'];
   const getGlobalTheme = () => {
     const saved = localStorage.getItem(THEME_KEY) || 'pink';
@@ -2382,13 +2475,17 @@
   const SUPABASE_URL = 'https://fltddfytlvedtxkpntvd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsdGRkZnl0bHZlZHR4a3BudHZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNTE4OTUsImV4cCI6MjA5NjYyNzg5NX0.nkSscmB3xVxCsXL5yFS_0-JSwCwFOesx4o6tOB9BB1E';
 
-  let cfg = { code: '' };
+  let cfg = { code: '', owner_id: '', friend_id: '' };
   let auth = null;
+  let cachedReaderNames = {};
   try {
     const savedCfg = JSON.parse(localStorage.getItem(CFG_KEY)) || {};
     cfg.code = savedCfg.code || '';
+    cfg.owner_id = savedCfg.owner_id || '';
+    cfg.friend_id = savedCfg.friend_id || '';
   } catch (e) { /* ignore */ }
   try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { auth = null; }
+  try { cachedReaderNames = JSON.parse(localStorage.getItem(READER_NAMES_KEY)) || {}; } catch (e) { cachedReaderNames = {}; }
 
   const incomingCode = parseShelfCode(window.location.href);
   let shelfMode = localStorage.getItem(MODE_KEY) || 'solo';
@@ -2569,6 +2666,7 @@
       user: data.user
     };
     localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    if (data.user && data.user.id) cacheReaderName(data.user.id, displayNameFromUser(data.user));
   }
 
   async function refreshSessionIfNeeded() {
@@ -2646,6 +2744,34 @@
     return email ? email.split('@')[0] : 'reader';
   }
 
+  function saveCachedReaderNames() {
+    localStorage.setItem(READER_NAMES_KEY, JSON.stringify(cachedReaderNames || {}));
+  }
+
+  function cacheReaderName(userId, name) {
+    if (!userId || !name) return;
+    cachedReaderNames = cachedReaderNames || {};
+    cachedReaderNames[userId] = name;
+    saveCachedReaderNames();
+  }
+
+  async function loadReaderNamesForShelf(row) {
+    if (!row || !hasSupabaseConfig() || !signedIn()) return;
+    const ids = [row.owner_id, row.friend_id].filter(Boolean);
+    if (!ids.length) return;
+    try {
+      const query = ids.map(encodeURIComponent).join(',');
+      const profiles = await sharedFetch('/rest/v1/profiles?user_id=in.(' + query + ')&select=user_id,username', { method: 'GET' });
+      (profiles || []).forEach(p => cacheReaderName(p.user_id, p.username));
+      saveCurrentReaderName();
+      if (currentId) updateReviewModeUI();
+      renderStats();
+      if (!currentId) renderShelf();
+    } catch (e) {
+      /* names are cosmetic; keep the shelf usable if the profiles lookup fails */
+    }
+  }
+
   function updateUserBar() {
     const name = displayNameFromUser(auth && auth.user);
     userLabel.innerHTML = name ? 'signed in as ' + esc(name) : 'signed in';
@@ -2664,13 +2790,14 @@
   async function startApp() {
     await refreshSessionIfNeeded();
     loadDB();
+    saveCurrentReaderName();
     appShell.classList.remove('hidden');
     authView.classList.add('hidden');
     updateUserBar();
     applyTheme();
     showDash();
     updateShelfModeUI();
-    updateInviteUI();
+    updateInviteUI(activeShelfRow);
     if (shelfMode === 'shared' && cfg.code && signedIn()) {
       if (incomingCode) setStatus('joining locked invite &#10084; syncing shared shelf...');
       syncNow();
@@ -2844,8 +2971,7 @@
     /* most-read genre */
     const counts = {};
     books.forEach(b => {
-      const g = b.fields && b.fields.genre;
-      if (g) counts[g] = (counts[g] || 0) + 1;
+      bookGenres(b).forEach(g => { counts[g] = (counts[g] || 0) + 1; });
     });
     const topGenre = Object.keys(counts).sort((a, b2) => counts[b2] - counts[a])[0] || null;
 
@@ -2882,11 +3008,23 @@
   const emptyNote = document.getElementById('emptyNote');
   const genreFilter = document.getElementById('genreFilter');
   const sortOrder = document.getElementById('sortOrder');
+  const genreTags = document.getElementById('genreTags');
 
   function starStr(n) { return n ? '&#9733;'.repeat(n) : ''; }
 
+  function normalizeGenres(value) {
+    if (Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean);
+    const raw = String(value || '').trim();
+    if (!raw) return [];
+    return raw.split(',').map(v => v.trim()).filter(Boolean);
+  }
+
+  function bookGenres(b) {
+    return normalizeGenres(b && b.fields && b.fields.genre);
+  }
+
   function bookGenre(b) {
-    return String((b && b.fields && b.fields.genre) || '').trim();
+    return bookGenres(b).join(', ');
   }
 
   function bookTitleForSort(b) {
@@ -2907,7 +3045,7 @@
     const genres = [...new Set((db.order || [])
       .map(id => db.books[id])
       .filter(b => b && hasBookContent(b) && (!b.shelfMode || b.shelfMode === shelfMode))
-      .map(bookGenre)
+      .flatMap(bookGenres)
       .filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
     genreFilter.innerHTML = '<option value="">All genres</option>' +
@@ -3057,6 +3195,8 @@
   const bookDetailsFrame = document.getElementById('bookDetailsFrame');
   const ratingMainText = document.getElementById('ratingMainText');
   const readingMonthInput = document.getElementById('readingMonth');
+  const readingCalendarPanel = document.getElementById('readingCalendarPanel');
+  const notesFrame = document.getElementById('notesFrame');
   const readingCalendar = document.getElementById('readingCalendar');
   const readingCalendarCount = document.getElementById('readingCalendarCount');
   const clearCalendarMonthBtn = document.getElementById('clearCalendarMonthBtn');
@@ -3076,18 +3216,21 @@
   const reviewerOneLockNote = document.getElementById('reviewerOneLockNote');
   const reviewerTwoLockNote = document.getElementById('reviewerTwoLockNote');
   const reviewDivider = document.getElementById('reviewDivider');
-  let activeShelfRow = null;
+  let activeShelfRow = (cfg.code && (cfg.owner_id || cfg.friend_id)) ? { id: cfg.code, owner_id: cfg.owner_id || null, friend_id: cfg.friend_id || null } : null;
 
   function saveCurrentReaderName() {
     if (!signedIn()) return;
+    const name = displayNameFromUser(auth.user);
     db.readerNames = db.readerNames || {};
-    db.readerNames[auth.user.id] = displayNameFromUser(auth.user);
+    db.readerNames[auth.user.id] = name;
+    cacheReaderName(auth.user.id, name);
   }
 
   function readerName(userId, fallback) {
     if (!userId) return fallback;
-    if (db.readerNames && db.readerNames[userId]) return db.readerNames[userId];
     if (auth && auth.user && auth.user.id === userId) return displayNameFromUser(auth.user);
+    if (cachedReaderNames && cachedReaderNames[userId]) return cachedReaderNames[userId];
+    if (db.readerNames && db.readerNames[userId]) return db.readerNames[userId];
     return fallback;
   }
 
@@ -3209,6 +3352,7 @@
         ? (totalCount + (totalCount === 1 ? ' day marked' : ' days marked'))
         : (monthCount + ' this month • ' + totalCount + ' total');
     }
+    syncLowerPanelHeights();
   }
 
   if (readingCalendar) {
@@ -3236,6 +3380,28 @@
       book().fields.reading_days = readDaysArray().filter(d => !d.startsWith(month + '-'));
       book().updatedAt = Date.now();
       renderReadingCalendar();
+      autosave();
+    });
+  }
+
+  function paintGenreTags() {
+    if (!genreTags || !book()) return;
+    const selected = new Set(normalizeGenres(book().fields && book().fields.genre));
+    [...genreTags.querySelectorAll('.genre-tag')].forEach(btn =>
+      btn.classList.toggle('on', selected.has(btn.dataset.genre)));
+  }
+
+  if (genreTags) {
+    genreTags.addEventListener('click', e => {
+      const btn = e.target.closest('.genre-tag');
+      if (!btn || !book()) return;
+      const selected = new Set(normalizeGenres(book().fields && book().fields.genre));
+      const value = btn.dataset.genre;
+      if (selected.has(value)) selected.delete(value);
+      else selected.add(value);
+      book().fields.genre = [...selected];
+      book().updatedAt = Date.now();
+      paintGenreTags();
       autosave();
     });
   }
@@ -3344,6 +3510,7 @@
       if (recropCoverBtn) recropCoverBtn.classList.add('hidden');
     }
     syncCoverToDetailsHeight();
+    syncLowerPanelHeights();
   };
 
   function syncCoverToDetailsHeight() {
@@ -3370,6 +3537,24 @@
     new ResizeObserver(syncCoverToDetailsHeight).observe(bookDetailsFrame);
   }
   window.addEventListener('resize', syncCoverToDetailsHeight);
+  function syncLowerPanelHeights() {
+    if (!readingCalendarPanel || !notesFrame || !bookView || bookView.classList.contains('hidden')) return;
+    if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+      readingCalendarPanel.style.height = '';
+      readingCalendarPanel.style.minHeight = '';
+      return;
+    }
+    requestAnimationFrame(() => {
+      const h = Math.max(250, Math.round(notesFrame.getBoundingClientRect().height));
+      readingCalendarPanel.style.height = h + 'px';
+      readingCalendarPanel.style.minHeight = h + 'px';
+    });
+  }
+
+  if (window.ResizeObserver && notesFrame) {
+    new ResizeObserver(syncLowerPanelHeights).observe(notesFrame);
+  }
+  window.addEventListener('resize', syncLowerPanelHeights);
 
   let cropImage = null;
   let cropSourceData = null;
@@ -3477,7 +3662,8 @@
   function populate() {
     const b = book();
     saveCurrentReaderName();
-    fieldEls.forEach(el => el.value = b.fields[el.dataset.key] || '');
+    fieldEls.forEach(el => el.value = Array.isArray(b.fields[el.dataset.key]) ? b.fields[el.dataset.key].join(', ') : (b.fields[el.dataset.key] || ''));
+    paintGenreTags();
     updateComputedMainRating();
     starBoxes.forEach(paintStars);
     chipGroups.forEach(paintChips);
@@ -3486,6 +3672,7 @@
     renderReadingCalendar();
     updateReviewModeUI();
     syncCoverToDetailsHeight();
+    syncLowerPanelHeights();
   }
 
   function openBook(id) {
@@ -3495,6 +3682,7 @@
     bookView.classList.remove('hidden');
     updateReviewModeUI();
     syncCoverToDetailsHeight();
+    syncLowerPanelHeights();
     window.scrollTo(0, 0);
   }
 
@@ -3592,7 +3780,13 @@
   }
 
   function updateInviteUI(row) {
-    if (row) activeShelfRow = row;
+    if (row) {
+      activeShelfRow = row;
+      cfg.owner_id = row.owner_id || cfg.owner_id || '';
+      cfg.friend_id = row.friend_id || cfg.friend_id || '';
+      saveCfg();
+      loadReaderNamesForShelf(row);
+    }
     const hasCode = !!cfg.code;
     inviteCodeText.textContent = hasCode ? cfg.code : 'not created yet';
     inviteLinkText.value = hasCode ? buildInviteLink() : '';

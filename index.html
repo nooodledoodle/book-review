@@ -53,6 +53,12 @@
     --star-on: #a0784a; --star-off: #e6d9c2;
     --plank: #8a6a48; --plank-light: #a98a64;
   }
+  html[data-theme="orange"] {
+    --bg: #ffe1bf; --bg-deep: #ffc985; --blush: #ffb45c; --cream: #fff8eb;
+    --ink: #7a3600; --ink-dark: #542500; --line: #b85f00; --rule: #e7a05a;
+    --star-on: #FF8700; --star-off: #ffd6ad;
+    --plank: #b15a00; --plank-light: #d97a12;
+  }
 
   * { box-sizing: border-box; }
 
@@ -71,7 +77,25 @@
     transition: background-color .3s ease;
   }
 
-  .page { max-width: 980px; margin: 0 auto; }
+  .page { max-width: 1080px; margin: 0 auto; }
+
+  .app-topbar {
+    display: grid;
+    grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
+    align-items: center;
+    gap: 18px;
+    margin: 0 auto 10px;
+  }
+  .top-left,
+  .top-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .top-left { justify-content: flex-start; }
+  .top-title { text-align: center; min-width: 0; }
+  .top-right { justify-content: flex-end; }
 
   /* ---------- title ---------- */
   h1.masthead {
@@ -99,7 +123,7 @@
     justify-content: center;
     align-items: center;
     gap: 9px;
-    margin-bottom: 22px;
+    margin: 0;
     font-family: var(--type);
     font-size: .75rem;
     letter-spacing: .15em;
@@ -121,6 +145,7 @@
   .dot[data-theme="sage"]     { background: #aebf95; }
   .dot[data-theme="lavender"] { background: #b9a5d6; }
   .dot[data-theme="beige"]    { background: #c9b08a; }
+  .dot[data-theme="orange"]   { background: #FF8700; }
 
   /* ---------- buttons ---------- */
   .toolbar {
@@ -705,8 +730,30 @@
     border-radius: 999px;
     padding: 4px 10px;
   }
+  @media (max-width: 900px) {
+    .app-topbar {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .top-left,
+    .top-right {
+      justify-content: center;
+    }
+  }
+
   @media (max-width: 760px) {
     .invite-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 900px) {
+    .app-topbar {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .top-left,
+    .top-right {
+      justify-content: center;
+    }
   }
 
   @media (max-width: 760px) {
@@ -752,33 +799,39 @@
 
 <div class="page hidden" id="appShell">
 
-  <h1 class="masthead">BOOK&nbsp;REVIEW</h1>
-  <p class="masthead-sub">— a shared reading journal —</p>
+  <div class="app-topbar no-print">
+    <div class="top-left" id="shelfModeBar">
+      <button class="btn" id="soloShelfBtn" type="button">My Bookshelf</button>
+      <button class="btn" id="sharedShelfBtn" type="button">Shared Bookshelf</button>
+    </div>
+
+    <div class="top-title">
+      <h1 class="masthead">BOOK&nbsp;REVIEW</h1>
+      <p class="masthead-sub">— a shared reading journal —</p>
+    </div>
+
+    <div class="top-right">
+      <div class="theme-dots" id="themeDots">
+        <span>theme:</span>
+        <button class="dot" data-theme="pink" title="blush pink"></button>
+        <button class="dot" data-theme="sage" title="sage garden"></button>
+        <button class="dot" data-theme="lavender" title="lavender dusk"></button>
+        <button class="dot" data-theme="beige" title="vintage beige"></button>
+        <button class="dot" data-theme="orange" title="orange crush"></button>
+      </div>
+      <button class="btn" id="newBookBtn" type="button">&#10010; New Book</button>
+    </div>
+  </div>
+
+  <p class="mode-helper no-print" id="modeHelper">your private shelf is only for your own reviews</p>
 
   <div class="userbar no-print" id="userBar">
     <span id="userLabel">signed in</span>
     <button class="btn" id="signOutBtn" type="button">Sign Out</button>
   </div>
 
-  <div class="theme-dots no-print" id="themeDots">
-    <span>theme:</span>
-    <button class="dot" data-theme="pink" title="blush pink"></button>
-    <button class="dot" data-theme="sage" title="sage garden"></button>
-    <button class="dot" data-theme="lavender" title="lavender dusk"></button>
-    <button class="dot" data-theme="beige" title="vintage beige"></button>
-  </div>
-
   <!-- ================= DASHBOARD ================= -->
   <div id="dashView">
-    <div class="toolbar no-print" id="shelfModeBar">
-      <button class="btn" id="soloShelfBtn" type="button">My Bookshelf</button>
-      <button class="btn" id="sharedShelfBtn" type="button">Shared Bookshelf</button>
-    </div>
-    <p class="mode-helper no-print" id="modeHelper">your private shelf is only for your own reviews</p>
-
-    <div class="toolbar">
-      <button class="btn" id="newBookBtn">&#10010; New Book</button>
-    </div>
 
     <div class="frame">
       <span class="frame-label">Reading Stats</span>
@@ -905,9 +958,7 @@
       <div class="frame review-card" id="reviewerOneCard" data-reviewer-slot="me">
         <span class="frame-label" id="reviewerOneLabel">My Review</span>
         <p class="review-lock-note hidden" id="reviewerOneLockNote">Only this reader can edit this review.</p>
-        <div class="fieldrow"><label>Name:</label><input type="text" data-key="me_name" placeholder="you!"></div>
         <div class="stars mini" data-stars="rating_me" aria-label="My rating"></div>
-        <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="me_quote"></div>
         <span class="mini-label">Main thoughts:</span>
         <textarea class="lined" rows="5" data-key="me_thoughts" placeholder="spill everything..."></textarea>
         <div class="chip-row">
@@ -931,9 +982,7 @@
       <div class="frame review-card shared-only" id="reviewerTwoCard" data-reviewer-slot="fr">
         <span class="frame-label" id="reviewerTwoLabel">Friend's Review</span>
         <p class="review-lock-note hidden" id="reviewerTwoLockNote">Only this reader can edit this review.</p>
-        <div class="fieldrow"><label>Name:</label><input type="text" data-key="fr_name" placeholder="your reading bestie"></div>
         <div class="stars mini" data-stars="rating_fr" aria-label="Friend's rating"></div>
-        <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="fr_quote"></div>
         <span class="mini-label">Main thoughts:</span>
         <textarea class="lined" rows="5" data-key="fr_thoughts" placeholder="spill everything..."></textarea>
         <div class="chip-row">
@@ -977,7 +1026,7 @@
    APP STATE
    db.books[id] = { fields, stars, chips, cover, createdAt }
    db.order     = [ids, newest first]
-   db.theme     = 'pink' | 'sage' | 'lavender' | 'beige'
+   db.theme     = 'pink' | 'sage' | 'lavender' | 'beige' | 'orange'
    ============================================================ */
 (function () {
   const STORAGE_PREFIX = 'bookReviewJournal.v3.';
@@ -986,6 +1035,17 @@
   const AUTH_KEY = 'bookReviewJournal.auth';
   const CFG_KEY = 'bookReviewJournal.sync';
   const MODE_KEY = 'bookReviewJournal.shelfMode';
+  const THEME_KEY = 'bookReviewJournal.theme';
+  const ALLOWED_THEMES = ['pink', 'sage', 'lavender', 'beige', 'orange'];
+  const getGlobalTheme = () => {
+    const saved = localStorage.getItem(THEME_KEY) || 'pink';
+    return ALLOWED_THEMES.includes(saved) ? saved : 'pink';
+  };
+  const saveGlobalTheme = theme => {
+    const safe = ALLOWED_THEMES.includes(theme) ? theme : 'pink';
+    localStorage.setItem(THEME_KEY, safe);
+    return safe;
+  };
 
   /* OWNER SETUP:
      Paste your Supabase project URL and public anon key here before publishing.
@@ -1011,7 +1071,7 @@
   const hasSupabaseConfig = () => !!(supabaseUrl() && supabaseKey());
   const signedIn = () => !!(auth && auth.access_token && auth.user && auth.user.id);
 
-  const blankDb = () => ({ books: {}, order: [], theme: 'pink', deleted: {} });
+  const blankDb = () => ({ books: {}, order: [], theme: getGlobalTheme(), deleted: {} });
   let db = blankDb();
   let currentId = null;
 
@@ -1050,9 +1110,40 @@
         localStorage.removeItem(LEGACY_KEY);
       }
     } catch (e) { /* ignore */ }
+    db.theme = getGlobalTheme();
   }
 
-  const saveDB = () => localStorage.setItem(storageKey(), JSON.stringify(db));
+  function hasFilledValue(value) {
+    if (Array.isArray(value)) return value.some(hasFilledValue);
+    return String(value ?? '').trim() !== '';
+  }
+
+  function hasBookContent(b) {
+    if (!b) return false;
+    const ignoredFields = new Set(['me_name', 'fr_name', 'me_quote', 'fr_quote']);
+    const hasFields = Object.entries(b.fields || {}).some(([key, value]) => !ignoredFields.has(key) && hasFilledValue(value));
+    const hasStars = Object.values(b.stars || {}).some(value => Number(value) > 0);
+    const hasChips = Object.values(b.chips || {}).some(hasFilledValue);
+    return hasFields || hasStars || hasChips || !!b.cover;
+  }
+
+  function ensureCurrentBookSaved() {
+    if (!currentId || !db.books[currentId] || !hasBookContent(db.books[currentId])) return;
+    if (!db.order.includes(currentId)) db.order.unshift(currentId);
+  }
+
+  function compactDbForStorage() {
+    ensureCurrentBookSaved();
+    db.theme = saveGlobalTheme(db.theme || getGlobalTheme());
+    const out = Object.assign(blankDb(), db);
+    out.books = {};
+    out.order = (db.order || []).filter(id => db.books[id] && hasBookContent(db.books[id]));
+    out.order.forEach(id => { out.books[id] = db.books[id]; });
+    db.order = out.order;
+    return out;
+  }
+
+  const saveDB = () => localStorage.setItem(storageKey(), JSON.stringify(compactDbForStorage()));
   let saveTimer;
   const autosave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveDB, 400); scheduleSync(); };
   const book = () => db.books[currentId];
@@ -1329,7 +1420,8 @@
      ============================================================ */
   const themeDots = document.getElementById('themeDots');
   function applyTheme() {
-    const t = db.theme || 'pink';
+    const t = saveGlobalTheme(db.theme || getGlobalTheme());
+    db.theme = t;
     document.documentElement.setAttribute('data-theme', t);
     [...themeDots.querySelectorAll('.dot')].forEach(d =>
       d.classList.toggle('active', d.dataset.theme === t));
@@ -1337,9 +1429,10 @@
   themeDots.addEventListener('click', e => {
     const dot = e.target.closest('.dot');
     if (!dot) return;
-    db.theme = dot.dataset.theme;
+    db.theme = saveGlobalTheme(dot.dataset.theme);
     applyTheme();
     saveDB();
+    scheduleSync();
   });
 
   /* ============================================================
@@ -1485,7 +1578,6 @@
     const per = Math.max(2, Math.floor(w / slot));
 
     const items = db.order.map(bookHtml);
-    items.push('<div class="add-book" id="addCard"><span class="plus">&#10010;</span><span>add a<br>new book</span></div>');
 
     const rows = [];
     for (let i = 0; i < items.length; i += per) rows.push(items.slice(i, i + per));
@@ -1518,7 +1610,6 @@
       renderShelf();
       return;
     }
-    if (e.target.closest('#addCard')) { newBook(); return; }
     const card = e.target.closest('.shelf-book');
     if (card) openBook(card.dataset.id);
   });
@@ -1528,12 +1619,14 @@
   function newBook() {
     const id = 'b' + Date.now().toString(36);
     db.books[id] = { fields: {}, stars: {}, chips: {}, cover: null, createdAt: Date.now(), updatedAt: Date.now() };
-    db.order.unshift(id);
-    saveDB();
     openBook(id);
   }
 
   function showDash() {
+    if (currentId && db.books[currentId] && !hasBookContent(db.books[currentId])) {
+      delete db.books[currentId];
+      db.order = db.order.filter(id => id !== currentId);
+    }
     currentId = null;
     bookView.classList.add('hidden');
     dashView.classList.remove('hidden');
@@ -1738,6 +1831,11 @@
   document.getElementById('backBtn').addEventListener('click', () => { saveDB(); showDash(); });
 
   document.getElementById('saveBtn').addEventListener('click', () => {
+    if (!book() || !hasBookContent(book())) {
+      showToast('add book info first &#9998;');
+      return;
+    }
+    ensureCurrentBookSaved();
     saveDB();
     showToast('review saved &#10084;');
   });
@@ -2030,7 +2128,7 @@
       if (!seen[id]) { seen[id] = true; order.push(id); }
     });
     db.order = order;
-    db.theme = db.theme || remote.theme || 'pink';
+    db.theme = getGlobalTheme();
   }
 
   let syncing = false;

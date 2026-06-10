@@ -1258,6 +1258,125 @@
     .bookcase::before, .bookcase::after { display: none !important; }
     .shelf-book:nth-child(3n) { transform: none; }
   }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER 3
+     fixed shelf rails - cog settings modal - floating hearts
+     ============================================================ */
+
+  /* ---------- shelf, rebuilt properly ---------- */
+  /* rails now wrap ONLY the shelf area, not the filters above it */
+  .bookcase { overflow: visible; }
+  .bookcase::before, .bookcase::after { display: none; }
+  #shelf { position: relative; padding: 4px 6px 22px; }
+  #shelf::before, #shelf::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: 0;
+    width: 13px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--plank-light), var(--plank) 70%);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), inset 0 -2px 2px rgba(60,30,30,.25), 1px 2px 3px rgba(60,30,30,.2);
+    z-index: 2;
+    pointer-events: none;
+  }
+  #shelf::before { left: -6px; }
+  #shelf::after  { right: -6px; }
+  .shelf-row::after { left: -10px; right: -10px; }
+  /* empty planks stay decorative but don't tower */
+  .shelf-row:empty { min-height: 92px; }
+  .shelf-row:last-child { margin-bottom: 20px; }
+
+  /* ---------- cog button ---------- */
+  .cog-btn .cog-icon { display: inline-block; transition: transform .35s ease; font-size: 1rem; }
+  .cog-btn:hover .cog-icon { transform: rotate(120deg); }
+
+  /* ---------- settings modal ---------- */
+  .settings-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(94, 50, 50, .35);
+    backdrop-filter: blur(2px);
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 7vh 16px 16px;
+    overflow-y: auto;
+    animation: rise .25s ease-out both;
+  }
+  .settings-modal {
+    width: min(720px, 96vw);
+    background: var(--bg);
+    border: 2.5px dashed var(--line);
+    border-radius: 10px;
+    box-shadow: 8px 10px 0 rgba(60, 30, 30, .25);
+    padding: 16px 18px 6px;
+    background-image:
+      radial-gradient(rgba(94,50,50,.05) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.2px);
+    background-size: 5px 5px, 9px 9px;
+  }
+  .settings-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .settings-title {
+    font-family: var(--type);
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--ink-dark);
+    font-size: 1rem;
+  }
+  /* the moved panel always shows inside the modal, even in solo mode */
+  .settings-modal #sharedShelfTools { display: block !important; }
+  .settings-modal .frame > .frame-label { background: var(--bg); }
+
+  /* ---------- floating hearts across the whole page ---------- */
+  #heartField {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  /* keep all real content above the hearts */
+  .page, .auth-screen, .settings-overlay, .toast { position: relative; z-index: 1; }
+  .settings-overlay, .toast { position: fixed; }
+  @keyframes heartdrift {
+    0%   { transform: translateY(104vh) rotate(-10deg) scale(.9); opacity: 0; }
+    12%  { opacity: var(--h-op, .14); }
+    85%  { opacity: var(--h-op, .14); }
+    100% { transform: translateY(-12vh) rotate(12deg) scale(1.1); opacity: 0; }
+  }
+  #heartField span {
+    position: absolute;
+    bottom: 0;
+    color: var(--star-on);
+    animation: heartdrift linear infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #heartField { display: none; }
+  }
+  @media print {
+    #heartField, .settings-overlay { display: none !important; }
+  }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER 4 - heart snowfall on sign-in
+     ============================================================ */
+
+  /* remove the two oversized hearts that popped in and out near the form */
+  .auth-screen::before, .auth-screen::after { display: none !important; }
+
+  /* extra hearts only show while the sign-in screen is up */
+  #heartField span.extra { display: none; }
+  #heartField.dense span.extra { display: block; }
 </style>
 </head>
 <body>
@@ -1298,6 +1417,7 @@
 
     <div class="top-right">
       <button class="btn" id="newBookBtn" type="button">&#10010; New Book</button>
+      <button class="btn cog-btn" id="settingsBtn" type="button" title="shared shelf settings"><span class="cog-icon">&#9881;</span></button>
       <div class="theme-dots" id="themeDots">
         <span>theme:</span>
         <button class="dot" data-theme="pink" title="blush pink"></button>
@@ -1322,41 +1442,6 @@
     <div class="frame">
       <span class="frame-label">Reading Stats</span>
       <div class="stats-grid" id="statsGrid"></div>
-    </div>
-
-    <div class="frame no-print shared-only" id="sharedShelfTools">
-      <span class="frame-label">Shared Shelf</span>
-      <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
-      <div class="toolbar" style="margin-bottom:10px">
-        <button class="btn" id="createInviteBtn">&#10084; Create Locked Invite</button>
-        <button class="btn" id="copyInviteBtn">Copy Invite Link</button>
-        <button class="btn" id="copyCodeBtn">Copy Code</button>
-        <button class="btn" id="syncSetupBtn">Join with Code</button>
-        <button class="btn" id="syncNowBtn">&#8635; Sync Now</button>
-      </div>
-
-      <div id="invitePanel" class="invite-panel hidden">
-        <div class="invite-grid">
-          <div class="invite-card">
-            <span class="invite-label">locked invite code</span>
-            <div class="invite-code" id="inviteCodeText">not created yet</div>
-            <span class="locked-pill" id="inviteLockPill">two-person shelf</span>
-          </div>
-          <div class="invite-card invite-link-row">
-            <span class="invite-label">invite link</span>
-            <input type="text" id="inviteLinkText" readonly>
-          </div>
-        </div>
-        <p class="sync-hint">send this to one friend only. once one friend joins, the shelf locks to the two signed-in accounts.</p>
-      </div>
-
-      <div id="syncSetup" class="hidden">
-        <div class="fieldrow"><label>Invite code/link:</label><input type="text" id="cfgCode"></div>
-        <div class="toolbar" style="margin-bottom:4px">
-          <button class="btn" id="cfgSaveBtn">&#10084; Join Shared Shelf</button>
-        </div>
-        <p class="sync-hint">paste the invite link or code your friend sent you. joining requires a signed-in account.</p>
-      </div>
     </div>
 
     <div class="frame bookcase">
@@ -1519,6 +1604,49 @@
     </div>
   </div>
 
+</div>
+
+<div class="settings-overlay hidden" id="settingsOverlay">
+  <div class="settings-modal">
+    <div class="settings-head">
+      <span class="settings-title">&#9881; shared shelf settings</span>
+      <button class="btn" id="settingsCloseBtn" type="button">&#10006; close</button>
+    </div>
+    <div class="frame no-print shared-only" id="sharedShelfTools">
+      <span class="frame-label">Shared Shelf</span>
+      <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
+      <div class="toolbar" style="margin-bottom:10px">
+        <button class="btn" id="createInviteBtn">&#10084; Create Locked Invite</button>
+        <button class="btn" id="copyInviteBtn">Copy Invite Link</button>
+        <button class="btn" id="copyCodeBtn">Copy Code</button>
+        <button class="btn" id="syncSetupBtn">Join with Code</button>
+        <button class="btn" id="syncNowBtn">&#8635; Sync Now</button>
+      </div>
+
+      <div id="invitePanel" class="invite-panel hidden">
+        <div class="invite-grid">
+          <div class="invite-card">
+            <span class="invite-label">locked invite code</span>
+            <div class="invite-code" id="inviteCodeText">not created yet</div>
+            <span class="locked-pill" id="inviteLockPill">two-person shelf</span>
+          </div>
+          <div class="invite-card invite-link-row">
+            <span class="invite-label">invite link</span>
+            <input type="text" id="inviteLinkText" readonly>
+          </div>
+        </div>
+        <p class="sync-hint">send this to one friend only. once one friend joins, the shelf locks to the two signed-in accounts.</p>
+      </div>
+
+      <div id="syncSetup" class="hidden">
+        <div class="fieldrow"><label>Invite code/link:</label><input type="text" id="cfgCode"></div>
+        <div class="toolbar" style="margin-bottom:4px">
+          <button class="btn" id="cfgSaveBtn">&#10084; Join Shared Shelf</button>
+        </div>
+        <p class="sync-hint">paste the invite link or code your friend sent you. joining requires a signed-in account.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast">saved &#10084;</div>
@@ -2775,6 +2903,52 @@
   setAuthMode('signin');
   if (auth && auth.access_token) startApp();
   else showAuth();
+})();
+</script>
+<script>
+/* ---------- cog settings modal ---------- */
+(function () {
+  const overlay = document.getElementById('settingsOverlay');
+  const openBtn = document.getElementById('settingsBtn');
+  const closeBtn = document.getElementById('settingsCloseBtn');
+  if (overlay && openBtn && closeBtn) {
+    openBtn.addEventListener('click', () => overlay.classList.remove('hidden'));
+    closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
+  }
+})();
+
+/* ---------- floating hearts ---------- */
+(function () {
+  const field = document.createElement('div');
+  field.id = 'heartField';
+  const glyphs = ['\u2764', '\u2765', '\u2766', '\u2764', '\u2665'];
+
+  function makeHeart(extra) {
+    const h = document.createElement('span');
+    h.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    if (extra) h.className = 'extra';
+    h.style.left = (1 + Math.random() * 97) + '%';
+    h.style.fontSize = (12 + Math.random() * (extra ? 30 : 24)) + 'px';
+    h.style.setProperty('--h-op', (extra ? 0.10 + Math.random() * 0.16 : 0.08 + Math.random() * 0.10).toFixed(2));
+    const dur = (extra ? 9 : 16) + Math.random() * (extra ? 13 : 14);
+    h.style.animationDuration = dur.toFixed(1) + 's';
+    h.style.animationDelay = (-Math.random() * dur).toFixed(1) + 's';
+    field.appendChild(h);
+  }
+  for (let i = 0; i < 18; i++) makeHeart(false);  /* always drifting */
+  for (let i = 0; i < 34; i++) makeHeart(true);   /* sign-in bonus hearts */
+  document.body.appendChild(field);
+
+  /* hearts get dense while the sign-in screen is showing */
+  const authView = document.getElementById('authView');
+  const sync = () => field.classList.toggle('dense',
+    !!authView && !authView.classList.contains('hidden'));
+  if (authView) {
+    new MutationObserver(sync).observe(authView, { attributes: true, attributeFilter: ['class'] });
+  }
+  sync();
 })();
 </script>
 </body>

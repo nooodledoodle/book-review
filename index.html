@@ -699,19 +699,19 @@
 <div class="auth-screen" id="authView">
   <div class="auth-card">
     <h1>BOOK&nbsp;REVIEW</h1>
-    <p class="auth-subtitle">sign in to create a locked shared shelf<br>or continue locally as a guest</p>
+    <p class="auth-subtitle">sign in or create your reading account</p>
 
     <div class="auth-tabs">
       <button class="auth-tab active" id="signInTab" type="button">Sign In</button>
       <button class="auth-tab" id="signUpTab" type="button">Sign Up</button>
     </div>
 
-    <div class="fieldrow"><label>Email:</label><input type="email" id="authEmail"></div>
-    <div class="fieldrow"><label>Password:</label><input type="password" id="authPassword"></div>
+    <div class="fieldrow"><label>User:</label><input type="text" id="authUser" autocomplete="username"></div>
+    <div class="fieldrow hidden" id="authEmailRow"><label>Email:</label><input type="email" id="authEmail" autocomplete="email"></div>
+    <div class="fieldrow"><label>Password:</label><input type="password" id="authPassword" autocomplete="current-password"></div>
 
     <div class="auth-actions">
       <button class="btn" id="authSubmitBtn" type="button">Sign In</button>
-      <button class="btn" id="guestBtn" type="button">Continue as Guest</button>
     </div>
     <div class="auth-status" id="authStatus"></div>
   </div>
@@ -723,7 +723,7 @@
   <p class="masthead-sub">— a shared reading journal —</p>
 
   <div class="userbar no-print" id="userBar">
-    <span id="userLabel">guest mode</span>
+    <span id="userLabel">signed in</span>
     <button class="btn" id="signOutBtn" type="button">Sign Out</button>
   </div>
 
@@ -968,10 +968,10 @@
   let db = blankDb();
   let currentId = null;
 
-  const userScope = () => (auth && auth.user && auth.user.id) ? 'user.' + auth.user.id : 'guest';
+  const userScope = () => (auth && auth.user && auth.user.id) ? 'user.' + auth.user.id : 'signedout';
   const storageKey = () => STORAGE_PREFIX + userScope();
 
-  /* ---------- load shelf data for the current signed-in user or guest ---------- */
+  /* ---------- load shelf data for the current signed-in user ---------- */
   function loadDB() {
     db = blankDb();
     try {
@@ -1008,10 +1008,12 @@
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   /* ============================================================
-     AUTH - Supabase email/password auth for GitHub Pages
+     AUTH - Sign up with user + email + password, sign in with user + password
      ============================================================ */
   const authView = document.getElementById('authView');
   const appShell = document.getElementById('appShell');
+  const authUser = document.getElementById('authUser');
+  const authEmailRow = document.getElementById('authEmailRow');
   const authEmail = document.getElementById('authEmail');
   const authPassword = document.getElementById('authPassword');
   const authStatus = document.getElementById('authStatus');
@@ -1031,6 +1033,8 @@
     authMode = mode;
     signInTab.classList.toggle('active', mode === 'signin');
     signUpTab.classList.toggle('active', mode === 'signup');
+    authEmailRow.classList.toggle('hidden', mode !== 'signup');
+    authPassword.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
     authSubmitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
     setAuthStatus('');
   }
@@ -1042,6 +1046,27 @@
     const res = await fetch(supabaseUrl() + path, { method: 'POST', headers, body: JSON.stringify(body) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Something went wrong.');
+    return data;
+  }
+
+  async function supabasePublicRpc(fnName, body) {
+    if (!hasSupabaseConfig()) throw new Error('Site owner needs to add the Supabase URL and anon key inside index.html first.');
+    const res = await fetch(supabaseUrl() + '/rest/v1/rpc/' + fnName, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey(),
+        Authorization: 'Bearer ' + supabaseKey(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body || {})
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
+    if (!res.ok) {
+      const msg = data && (data.message || data.error_description || data.msg || data.details);
+      throw new Error(msg || ('server said ' + res.status));
+    }
     return data;
   }
 
@@ -1068,9 +1093,71 @@
     }
   }
 
+  function cleanUsername(raw) {
+    return String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9._-]/g, '')
+      .replace(/^[._-]+|[._-]+$/g, '')
+      .slice(0, 40);
+  }
+
+  function validateUsername(raw) {
+    const username = cleanUsername(raw);
+    if (username.length < 3) throw new Error('user must be at least 3 letters or numbers');
+    return username;
+  }
+
+  function validateEmail(raw) {
+    const email = String(raw || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('enter a valid email for sign up');
+    return email;
+  }
+
+  async function getEmailForUsername(username) {
+    const email = await supabasePublicRpc('get_email_for_username', { p_username: username });
+    if (!email) throw new Error('user not found');
+    return String(email).toLowerCase();
+  }
+
+  async function usernameAvailable(username) {
+    return !!(await supabasePublicRpc('username_available', { p_username: username }));
+  }
+
+  async function ensureProfile(username, email) {
+    /* The SQL trigger creates this automatically. This is only a safety net when email confirmations are off. */
+    try {
+      await sharedFetch('/rest/v1/profiles', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify([{ user_id: auth.user.id, username: username, email: email }])
+      });
+    } catch (e) { /* trigger/RLS may already have handled it */ }
+  }
+
+  function friendlyAuthError(err) {
+    const msg = String((err && err.message) || err || '');
+    if (/username_available|get_email_for_username|profiles|schema cache|function .*not found|404|relation .*profiles/i.test(msg)) {
+      return 'database setup needed &mdash; run the updated Supabase SQL first';
+    }
+    if (/already registered|already exists|duplicate|unique/i.test(msg)) return 'that user or email is already taken';
+    if (/invalid login credentials/i.test(msg)) return 'user or password is incorrect';
+    if (/email not confirmed/i.test(msg)) return 'check your email to confirm your account first';
+    return esc(msg || 'could not sign in');
+  }
+
+  function displayNameFromUser(user) {
+    if (!user) return '';
+    const metaName = user.user_metadata && user.user_metadata.username;
+    if (metaName) return metaName;
+    const email = user.email || '';
+    return email ? email.split('@')[0] : 'reader';
+  }
+
   function updateUserBar() {
-    const email = auth && auth.user && auth.user.email;
-    userLabel.innerHTML = email ? 'signed in as ' + esc(email) : 'guest mode &mdash; local only';
+    const name = displayNameFromUser(auth && auth.user);
+    userLabel.innerHTML = name ? 'signed in as ' + esc(name) : 'signed in';
   }
 
   function showAuth() {
@@ -1103,38 +1190,54 @@
 
   signInTab.addEventListener('click', () => setAuthMode('signin'));
   signUpTab.addEventListener('click', () => setAuthMode('signup'));
+  [authUser, authEmail, authPassword].forEach(el => {
+    if (!el) return;
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') authSubmitBtn.click();
+    });
+  });
 
   authSubmitBtn.addEventListener('click', async () => {
-    const email = authEmail.value.trim();
     const password = authPassword.value;
-    if (!email || !password) { setAuthStatus('enter your email and password first'); return; }
+    let username, email;
+    try {
+      username = validateUsername(authUser.value);
+      if (!password) throw new Error('enter your password first');
+      if (authMode === 'signup') email = validateEmail(authEmail.value);
+    } catch (err) {
+      setAuthStatus(esc(err.message));
+      return;
+    }
+
     setAuthStatus(authMode === 'signin' ? 'signing in...' : 'creating your account...');
     authSubmitBtn.disabled = true;
     try {
       if (authMode === 'signup') {
-        const data = await supabaseAuth('/auth/v1/signup', { email, password });
+        const available = await usernameAvailable(username);
+        if (!available) throw new Error('that user is already taken');
+        const data = await supabaseAuth('/auth/v1/signup', {
+          email,
+          password,
+          data: { username }
+        });
         if (data.access_token) {
           rememberSession(data);
+          await ensureProfile(username, email);
           await startApp();
         } else {
-          setAuthStatus('account created &#10084; check your email to confirm it, then sign in');
+          setAuthStatus('account created &#10084; check your email if confirmation is turned on, then sign in with your user and password');
           setAuthMode('signin');
         }
       } else {
+        email = await getEmailForUsername(username);
         const data = await supabaseAuth('/auth/v1/token?grant_type=password', { email, password });
         rememberSession(data);
         await startApp();
       }
     } catch (err) {
-      setAuthStatus(esc(err.message || 'could not sign in'));
+      setAuthStatus(friendlyAuthError(err));
     }
     authSubmitBtn.disabled = false;
-  });
-
-  document.getElementById('guestBtn').addEventListener('click', async () => {
-    auth = null;
-    localStorage.removeItem(AUTH_KEY);
-    await startApp();
   });
 
   document.getElementById('signOutBtn').addEventListener('click', () => {
@@ -1695,7 +1798,7 @@
       return;
     }
     if (!signedIn()) {
-      setStatus(cfg.code ? 'sign in to join this locked shared shelf &#10084;' : 'guest mode is local only &mdash; sign in to create or join a shared shelf');
+      setStatus(cfg.code ? 'sign in to join this locked shared shelf &#10084;' : 'sign in to create or join a shared shelf');
       return;
     }
     if (!cfg.code) {

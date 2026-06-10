@@ -1712,6 +1712,105 @@
       box-shadow: none !important;
     }
   }
+
+
+  /* ============================================================
+     BOOK PAGE LAYOUT TWEAKS
+     cover is smaller, rating/pages/book number live in Book Details
+     ============================================================ */
+  .layout {
+    grid-template-columns: minmax(250px, 360px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .cover-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+  .cover-column .cover-box {
+    width: min(100%, 360px);
+    height: calc(100% - 54px);
+    min-height: 430px;
+    max-height: 720px;
+    aspect-ratio: auto;
+    margin: 0 auto 12px;
+  }
+  .cover-tools {
+    width: min(100%, 360px);
+    margin: 0 auto 18px;
+  }
+  .cover-tools .btn {
+    flex: 1 1 130px;
+    min-width: 0;
+  }
+  .detail-rating-block {
+    background: rgba(255,255,255,.08);
+    border: 1.5px dashed var(--line);
+    border-radius: 9px;
+    padding: 8px 10px 10px;
+    margin: 0 0 10px;
+  }
+  .detail-rating-block .mini-label {
+    margin: 0 0 6px;
+  }
+  .details-stars {
+    margin: 0;
+    background: rgba(255,255,255,.16);
+  }
+  .details-row-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(230px, .75fr);
+    gap: 10px;
+  }
+  .details-row-grid .fieldrow { margin-bottom: 0; }
+  .stars button {
+    color: color-mix(in srgb, var(--star-off) 45%, var(--line) 55%);
+    opacity: .95;
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+  }
+  .stars button.on {
+    opacity: 1;
+    color: var(--star-on);
+  }
+
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; align-items: start; }
+    .cover-column .cover-box {
+      width: min(100%, 280px);
+      height: auto;
+      min-height: 0;
+      aspect-ratio: 3 / 4;
+    }
+    .cover-tools { width: min(100%, 280px); }
+    .details-row-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .layout {
+      grid-template-columns: 2.35in 1fr !important;
+      align-items: start !important;
+      gap: .18in !important;
+    }
+    .cover-column .cover-box {
+      width: 2.15in !important;
+      height: 2.85in !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      margin: 0 auto .1in !important;
+    }
+    .detail-rating-block {
+      padding: .06in !important;
+      margin-bottom: .07in !important;
+      box-shadow: none !important;
+      break-inside: avoid;
+    }
+    .details-row-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: .07in !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -1812,7 +1911,7 @@
 
     <div class="layout">
       <!-- LEFT COLUMN -->
-      <div>
+      <div class="cover-column">
         <div class="cover-box" id="coverBox" title="Click to add a cover image">
           <span class="hint-text" id="coverHint">&#9998; click to add<br>a book cover</span>
           <img id="coverImg" alt="" style="display:none">
@@ -1821,20 +1920,6 @@
         <div class="cover-tools no-print">
           <button class="btn cover-action" id="changeCoverBtn" type="button">Change Cover</button>
           <button class="btn cover-action hidden" id="recropCoverBtn" type="button">Crop Cover</button>
-        </div>
-
-        <div class="stars" data-stars="rating_main" aria-label="Overall rating"></div>
-
-        <div class="fieldrow">
-          <label>Pages:</label>
-          <input type="text" data-key="pages" placeholder="e.g. 384">
-        </div>
-
-        <div class="fieldrow book-of">
-          <label>Book</label>
-          <input type="text" data-key="series_num" placeholder="__">
-          <label>of</label>
-          <input type="text" data-key="series_total" placeholder="__">
         </div>
       </div>
 
@@ -1867,6 +1952,25 @@
           </div>
           <div class="fieldrow"><label>Date started:</label><input type="date" data-key="date_started"></div>
           <div class="fieldrow"><label>Date finished:</label><input type="date" data-key="date_finished"></div>
+
+          <div class="detail-rating-block">
+            <span class="mini-label">Rating:</span>
+            <div class="stars details-stars" data-stars="rating_main" aria-label="Overall rating"></div>
+          </div>
+
+          <div class="details-row-grid">
+            <div class="fieldrow">
+              <label>Pages:</label>
+              <input type="text" data-key="pages" placeholder="e.g. 384">
+            </div>
+
+            <div class="fieldrow book-of">
+              <label>Book</label>
+              <input type="text" data-key="series_num" placeholder="__">
+              <label>of</label>
+              <input type="text" data-key="series_total" placeholder="__">
+            </div>
+          </div>
         </div>
 
         <div class="frame">

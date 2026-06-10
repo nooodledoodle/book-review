@@ -1454,6 +1454,75 @@
     }
     .top-left, .top-right { justify-content: center; flex-wrap: wrap; }
   }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER 6
+     unified toolbar - New Book on the shelf - steady page load
+     ============================================================ */
+
+  /* no more shifting on reload: fade in place + reserved scrollbar */
+  html { scrollbar-gutter: stable; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .page, .auth-screen { animation: fadein .4s ease-out both; }
+
+  /* header: title row, then ONE centered row with every control */
+  .app-topbar {
+    grid-template-columns: 1fr;
+    grid-template-areas: "title" "left";
+  }
+  .top-left {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .top-right { display: none; }    /* emptied - everything moved */
+  #userBar { display: none !important; }  /* identity lives in the cog settings */
+  .masthead-sub { margin-bottom: 0; }
+
+  /* cog + sign out match the tray height */
+  #settingsBtn, #signOutBtn { padding: 9px 14px; }
+
+  /* New Book sits at the head of the bookshelf, filters on the right */
+  .shelf-controls {
+    justify-content: space-between;
+    align-items: center;
+  }
+  .shelf-controls #newBookBtn { margin-right: auto; }
+
+  @media (max-width: 860px) {
+    .app-topbar { grid-template-areas: "title" "left"; }
+    .shelf-controls { justify-content: center; }
+    .shelf-controls #newBookBtn { margin-right: 0; }
+  }
+
+  /* ---- toolbar refinement: every control is its own pill ---- */
+  #shelfModeBar {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 12px;
+  }
+  #shelfModeBar .btn {
+    border: 2px dashed var(--line);
+    background: var(--cream);
+    box-shadow: 2px 2px 0 var(--shadow-ink);
+    border-radius: 999px;
+    padding: 9px 16px;
+  }
+  #shelfModeBar .btn:hover {
+    background: #fffdf7;
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--shadow-ink);
+  }
+  #shelfModeBar .btn.active {
+    background: var(--star-on);
+    border-style: solid;
+    border-color: var(--star-on);
+    color: #fff7f0;
+  }
+  #shelfModeBar .btn.active:hover { filter: brightness(1.06); }
 </style>
 </head>
 <body>
@@ -2996,11 +3065,19 @@
   }
 })();
 
-/* ---------- identity under the title ---------- */
+/* ---------- one unified toolbar ---------- */
 (function () {
-  const bar = document.getElementById('userBar');
-  const title = document.querySelector('.top-title');
-  if (bar && title) title.appendChild(bar);
+  const left = document.querySelector('.top-left');
+  const dots = document.getElementById('themeDots');
+  const cog = document.getElementById('settingsBtn');
+  const signOut = document.getElementById('signOutBtn');
+  if (left && dots) left.appendChild(dots);
+  if (left && cog) left.appendChild(cog);
+  if (left && signOut) left.appendChild(signOut);
+  /* New Book lives at the top of the bookshelf now */
+  const newBook = document.getElementById('newBookBtn');
+  const controls = document.getElementById('shelfControls');
+  if (newBook && controls) controls.insertBefore(newBook, controls.firstChild);
 })();
 
 /* ---------- floating hearts ---------- */

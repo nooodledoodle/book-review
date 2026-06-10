@@ -1106,6 +1106,158 @@
     .frame::after, .auth-card::before { display: none !important; }
     .stat-tile { transform: none; }
   }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER 2 - deeper scrapbook charm
+     ============================================================ */
+
+  /* gentle entrance */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .page, .auth-screen { animation: rise .5s ease-out both; }
+
+  /* smooth cross-fade when switching themes */
+  .frame, .btn, .fieldrow, .chip, .stat-tile, .invite-card, .auth-card,
+  .auth-tab, .shelf-control, .code-pill, .cover-box, .stars {
+    transition: background-color .3s ease, border-color .3s ease,
+                color .3s ease, box-shadow .2s ease, transform .15s ease;
+  }
+
+  /* faint fleurons tucked in the page corners */
+  body::before, body::after {
+    position: fixed;
+    font-size: 9rem;
+    color: var(--ink-dark);
+    opacity: .045;
+    z-index: -1;
+    pointer-events: none;
+    font-family: var(--serif);
+  }
+  body::before { content: '\2766'; top: -20px; left: -8px; transform: rotate(-18deg); }
+  body::after  { content: '\2766'; bottom: -26px; right: -6px; transform: rotate(160deg); }
+
+  /* section labels become little index tabs */
+  .frame > .frame-label {
+    background: var(--cream);
+    border: 1.5px dashed var(--line);
+    padding: 3px 14px;
+    border-radius: 999px;
+    transform: rotate(-1.2deg);
+    box-shadow: 1.5px 2px 0 rgba(94, 50, 50, .12);
+  }
+
+  /* the field you're writing in glows softly */
+  .fieldrow:focus-within {
+    border-color: var(--line);
+    box-shadow: 2px 2px 0 rgba(94, 50, 50, .07), 0 0 0 3px var(--star-off);
+  }
+  textarea:focus { caret-color: var(--star-on); }
+  input:focus { caret-color: var(--star-on); }
+
+  /* stars pop when you pick them */
+  @keyframes starpop {
+    0% { transform: scale(.6) rotate(-12deg); }
+    55% { transform: scale(1.35) rotate(8deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .stars button.on { animation: starpop .28s ease; }
+
+  /* chips pop when chosen */
+  @keyframes chippop {
+    50% { transform: scale(1.08); }
+  }
+  .chip.on { animation: chippop .22s ease; }
+
+  /* ---------- the bookcase becomes real furniture ---------- */
+  .bookcase { overflow: hidden; }
+  .bookcase::before, .bookcase::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 12px;
+    bottom: 8px;
+    width: 13px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--plank-light), var(--plank) 70%);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), inset 0 -2px 2px rgba(60,30,30,.25), 1px 2px 3px rgba(60,30,30,.2);
+    z-index: 2;
+    opacity: 1;
+    transform: none;
+    pointer-events: none;
+  }
+  .bookcase::before { left: 7px; }
+  .bookcase::after  { right: 7px; border-left: none; border-right: none; height: auto; }
+  .shelf-row::after { left: -16px; right: -16px; }
+
+  /* some books lean, like a real shelf */
+  .shelf-book:nth-child(3n) {
+    transform: rotate(-2.4deg) translateY(1px);
+    transform-origin: bottom left;
+  }
+  .shelf-book:nth-child(3n):hover { transform: translateY(-8px) rotate(-1.2deg); }
+
+  /* generated covers get paper page-edges */
+  .book-front { position: relative; }
+  .book-front::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    top: 7px;
+    bottom: 7px;
+    width: 5px;
+    background: repeating-linear-gradient(
+      rgba(255,255,255,.75) 0 1.5px, transparent 1.5px 3.5px);
+    border-radius: 2px;
+    opacity: .85;
+    pointer-events: none;
+  }
+
+  /* bookshelf headline slightly grander */
+  #bookcaseLabel { font-size: 1.1rem; }
+
+  /* ---------- dreamy sign-in screen ---------- */
+  .auth-screen { position: relative; overflow: hidden; }
+  @keyframes floatheart {
+    0%   { transform: translateY(40vh) scale(.8) rotate(-8deg); opacity: 0; }
+    25%  { opacity: .14; }
+    75%  { opacity: .12; }
+    100% { transform: translateY(-45vh) scale(1.15) rotate(10deg); opacity: 0; }
+  }
+  .auth-screen::before, .auth-screen::after {
+    position: absolute;
+    font-size: 3rem;
+    color: var(--star-on);
+    pointer-events: none;
+    animation: floatheart 11s linear infinite;
+  }
+  .auth-screen::before { content: '\2764'; left: 16%; top: 30%; }
+  .auth-screen::after  { content: '\2765'; right: 14%; top: 45%; animation-delay: 5.5s; animation-duration: 13s; }
+
+  /* toast bounces in */
+  @keyframes toastin {
+    0% { transform: translateX(-50%) translateY(30px); }
+    60% { transform: translateX(-50%) translateY(-4px); }
+    100% { transform: translateX(-50%) translateY(0); }
+  }
+  .toast.show { animation: toastin .35s ease; }
+
+  /* top-right cluster breathes a little more */
+  .top-right { gap: 14px; }
+
+  /* reduced motion: respect it */
+  @media (prefers-reduced-motion: reduce) {
+    .page, .auth-screen, .stars button.on, .chip.on, .toast.show { animation: none; }
+    .auth-screen::before, .auth-screen::after { display: none; }
+  }
+
+  @media print {
+    body::before, body::after,
+    .auth-screen::before, .auth-screen::after,
+    .bookcase::before, .bookcase::after { display: none !important; }
+    .shelf-book:nth-child(3n) { transform: none; }
+  }
 </style>
 </head>
 <body>

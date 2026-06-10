@@ -144,7 +144,39 @@
   }
   .btn:hover { background: #fffdf7; transform: translateY(-1px); }
   .btn:active { transform: translateY(0); }
+  .btn.active {
+    background: var(--star-on);
+    border-style: solid;
+    color: #fff7f0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+  }
   .btn.danger:hover { background: #fbe9e9; }
+  .mode-helper {
+    text-align: center;
+    font-family: var(--type);
+    font-size: .78rem;
+    letter-spacing: .08em;
+    color: var(--line);
+    margin: -14px 0 20px;
+  }
+  .solo-mode .shared-only { display: none !important; }
+  .solo-mode .reviewers { grid-template-columns: minmax(0, 1fr); }
+  .locked-field { opacity: .62; }
+  .locked-field input, .locked-field textarea, .locked-field select,
+  input[disabled], textarea[disabled], select[disabled] {
+    cursor: not-allowed;
+  }
+  .stars.locked-field button, .chips.locked-field .chip {
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+  .review-lock-note {
+    font-family: var(--type);
+    font-size: .72rem;
+    color: var(--line);
+    letter-spacing: .08em;
+    margin: -4px 0 10px;
+  }
 
   /* ============================================================
      READING STATS
@@ -738,6 +770,12 @@
 
   <!-- ================= DASHBOARD ================= -->
   <div id="dashView">
+    <div class="toolbar no-print" id="shelfModeBar">
+      <button class="btn" id="soloShelfBtn" type="button">My Bookshelf</button>
+      <button class="btn" id="sharedShelfBtn" type="button">Shared Bookshelf</button>
+    </div>
+    <p class="mode-helper no-print" id="modeHelper">your private shelf is only for your own reviews</p>
+
     <div class="toolbar">
       <button class="btn" id="newBookBtn">&#10010; New Book</button>
     </div>
@@ -747,7 +785,7 @@
       <div class="stats-grid" id="statsGrid"></div>
     </div>
 
-    <div class="frame no-print">
+    <div class="frame no-print shared-only" id="sharedShelfTools">
       <span class="frame-label">Shared Shelf</span>
       <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
       <div class="toolbar" style="margin-bottom:10px">
@@ -783,8 +821,8 @@
     </div>
 
     <div class="frame bookcase">
-      <span class="frame-label">Our Bookshelf</span>
-      <p class="empty-note" id="emptyNote">your shelf is empty... add your first book together &#10084;</p>
+      <span class="frame-label" id="bookcaseLabel">My Bookshelf</span>
+      <p class="empty-note" id="emptyNote">your shelf is empty... add your first book &#10084;</p>
       <div id="shelf"></div>
     </div>
   </div>
@@ -861,11 +899,12 @@
       </div>
     </div>
 
-    <p class="divider-heart">&#10086; &#10086; &#10086; &nbsp;read together, reviewed together&nbsp; &#10086; &#10086; &#10086;</p>
+    <p class="divider-heart" id="reviewDivider">&#10086; &#10086; &#10086; &nbsp;my reading journal&nbsp; &#10086; &#10086; &#10086;</p>
 
-    <div class="reviewers">
-      <div class="frame">
-        <span class="frame-label">My Review</span>
+    <div class="reviewers" id="reviewersWrap">
+      <div class="frame review-card" id="reviewerOneCard" data-reviewer-slot="me">
+        <span class="frame-label" id="reviewerOneLabel">My Review</span>
+        <p class="review-lock-note hidden" id="reviewerOneLockNote">Only this reader can edit this review.</p>
         <div class="fieldrow"><label>Name:</label><input type="text" data-key="me_name" placeholder="you!"></div>
         <div class="stars mini" data-stars="rating_me" aria-label="My rating"></div>
         <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="me_quote"></div>
@@ -889,8 +928,9 @@
         </div>
       </div>
 
-      <div class="frame">
-        <span class="frame-label">Friend's Review</span>
+      <div class="frame review-card shared-only" id="reviewerTwoCard" data-reviewer-slot="fr">
+        <span class="frame-label" id="reviewerTwoLabel">Friend's Review</span>
+        <p class="review-lock-note hidden" id="reviewerTwoLockNote">Only this reader can edit this review.</p>
         <div class="fieldrow"><label>Name:</label><input type="text" data-key="fr_name" placeholder="your reading bestie"></div>
         <div class="stars mini" data-stars="rating_fr" aria-label="Friend's rating"></div>
         <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="fr_quote"></div>
@@ -915,7 +955,7 @@
       </div>
     </div>
 
-    <div class="frame">
+    <div class="frame shared-only" id="sharedFinalThoughts">
       <span class="frame-label">Our Final Thoughts</span>
       <div class="fieldrow"><label>We agreed on:</label>
         <input type="text" data-key="agreed" placeholder="the things we both yelled about"></div>
@@ -945,6 +985,7 @@
   const LEGACY_KEY  = 'bookReviewJournal.v1';
   const AUTH_KEY = 'bookReviewJournal.auth';
   const CFG_KEY = 'bookReviewJournal.sync';
+  const MODE_KEY = 'bookReviewJournal.shelfMode';
 
   /* OWNER SETUP:
      Paste your Supabase project URL and public anon key here before publishing.
@@ -960,6 +1001,11 @@
   } catch (e) { /* ignore */ }
   try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { auth = null; }
 
+  const incomingCode = parseShelfCode(window.location.href);
+  let shelfMode = localStorage.getItem(MODE_KEY) || 'solo';
+  if (incomingCode) shelfMode = 'shared';
+  if (!['solo', 'shared'].includes(shelfMode)) shelfMode = 'solo';
+
   const supabaseUrl = () => (SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const supabaseKey = () => (SUPABASE_ANON_KEY || '').trim();
   const hasSupabaseConfig = () => !!(supabaseUrl() && supabaseKey());
@@ -970,7 +1016,11 @@
   let currentId = null;
 
   const userScope = () => (auth && auth.user && auth.user.id) ? 'user.' + auth.user.id : 'signedout';
-  const storageKey = () => STORAGE_PREFIX + userScope();
+  const storageKey = () => {
+    const base = STORAGE_PREFIX + userScope() + '.' + shelfMode;
+    return shelfMode === 'shared' && cfg.code ? base + '.' + cfg.code : base;
+  };
+  const oldUserStorageKey = () => STORAGE_PREFIX + userScope();
 
   /* ---------- load shelf data for the current signed-in user ---------- */
   function loadDB() {
@@ -979,8 +1029,10 @@
       const saved = JSON.parse(localStorage.getItem(storageKey()));
       if (saved && saved.books) db = Object.assign(blankDb(), saved);
       else {
-        /* migrate your existing published version into the first account that opens it */
-        const old = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
+        /* migrate the previous one-shelf version into the matching first shelf that opens it */
+        const oldScoped = JSON.parse(localStorage.getItem(oldUserStorageKey()));
+        const oldGlobal = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
+        const old = oldScoped && oldScoped.books ? oldScoped : oldGlobal;
         if (old && old.books) db = Object.assign(blankDb(), old);
       }
     } catch (e) { /* start fresh */ }
@@ -1196,13 +1248,14 @@
     updateUserBar();
     applyTheme();
     showDash();
+    updateShelfModeUI();
     updateInviteUI();
-    if (cfg.code && signedIn()) {
+    if (shelfMode === 'shared' && cfg.code && signedIn()) {
       if (incomingCode) setStatus('joining locked invite &#10084; syncing shared shelf...');
       syncNow();
-    } else if (cfg.code && !signedIn()) {
+    } else if (shelfMode === 'shared' && cfg.code && !signedIn()) {
       setStatus('sign in to join this locked shared shelf &#10084;');
-    } else {
+    } else if (shelfMode === 'shared') {
       setStatus(hasSupabaseConfig() ? 'not connected &mdash; create a locked invite or join with a code &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
     }
   }
@@ -1290,6 +1343,53 @@
   });
 
   /* ============================================================
+     SOLO VS SHARED BOOKSHELVES
+     ============================================================ */
+  const soloShelfBtn = document.getElementById('soloShelfBtn');
+  const sharedShelfBtn = document.getElementById('sharedShelfBtn');
+  const modeHelper = document.getElementById('modeHelper');
+  const bookcaseLabel = document.getElementById('bookcaseLabel');
+  const sharedShelfTools = document.getElementById('sharedShelfTools');
+
+  function setShelfMode(mode) {
+    if (!['solo', 'shared'].includes(mode)) mode = 'solo';
+    if (shelfMode === mode) {
+      updateShelfModeUI();
+      return;
+    }
+    saveDB();
+    currentId = null;
+    shelfMode = mode;
+    localStorage.setItem(MODE_KEY, shelfMode);
+    loadDB();
+    applyTheme();
+    updateShelfModeUI();
+    showDash();
+    if (shelfMode === 'shared') syncNow();
+  }
+
+  function updateShelfModeUI() {
+    document.body.classList.toggle('solo-mode', shelfMode === 'solo');
+    soloShelfBtn.classList.toggle('active', shelfMode === 'solo');
+    sharedShelfBtn.classList.toggle('active', shelfMode === 'shared');
+    if (sharedShelfTools) sharedShelfTools.classList.toggle('hidden', shelfMode !== 'shared');
+    if (modeHelper) {
+      modeHelper.innerHTML = shelfMode === 'solo'
+        ? 'your private shelf is only for your own reviews'
+        : 'your shared shelf is locked to two readers and has both reviews';
+    }
+    if (bookcaseLabel) bookcaseLabel.textContent = shelfMode === 'solo' ? 'My Bookshelf' : 'Shared Bookshelf';
+    if (emptyNote) emptyNote.innerHTML = shelfMode === 'solo'
+      ? 'your shelf is empty... add your first book &#10084;'
+      : 'your shared shelf is empty... add your first book together &#10084;';
+    const newBookBtn = document.getElementById('newBookBtn');
+    if (newBookBtn) newBookBtn.innerHTML = shelfMode === 'solo' ? '&#10010; New Book' : '&#10010; New Shared Book';
+  }
+
+  soloShelfBtn.addEventListener('click', () => setShelfMode('solo'));
+  sharedShelfBtn.addEventListener('click', () => setShelfMode('shared'));
+
+  /* ============================================================
      READING STATS
      ============================================================ */
   const statsGrid = document.getElementById('statsGrid');
@@ -1327,13 +1427,21 @@
       '<div class="stat-tile"><span class="stat-num">' + num + '</span>' +
       '<span class="stat-label">' + label + '</span></div>';
 
-    statsGrid.innerHTML =
-      tile(n, 'books on shelf') +
-      tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
-      tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'my avg rating') +
-      tile(avgFr ? avgFr + ' &#9733;' : '&#8212;', "bestie's avg") +
-      tile(agree !== null ? agree : '&#8212;', 'rating twins') +
-      tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
+    if (shelfMode === 'solo') {
+      statsGrid.innerHTML =
+        tile(n, 'books on shelf') +
+        tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
+        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'my avg rating') +
+        tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
+    } else {
+      statsGrid.innerHTML =
+        tile(n, 'shared books') +
+        tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
+        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'user 1 avg') +
+        tile(avgFr ? avgFr + ' &#9733;' : '&#8212;', 'user 2 avg') +
+        tile(agree !== null ? agree : '&#8212;', 'rating twins') +
+        tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
+    }
   }
 
   /* ============================================================
@@ -1352,8 +1460,9 @@
     const title = esc(f.title) || 'untitled book';
     const tip = title +
       (f.author ? ' by ' + esc(f.author) : '') +
-      ' - me: ' + ((b.stars && b.stars.rating_me) || 0) + ', bestie: ' +
-      ((b.stars && b.stars.rating_fr) || 0);
+      (shelfMode === 'shared'
+        ? ' - user 1: ' + ((b.stars && b.stars.rating_me) || 0) + ', user 2: ' + ((b.stars && b.stars.rating_fr) || 0)
+        : ' - rating: ' + ((b.stars && b.stars.rating_me) || (b.stars && b.stars.rating_main) || 0));
     const inner = b.cover
       ? '<img src="' + b.cover + '" alt="">'
       : '<div class="book-front">' +
@@ -1428,6 +1537,7 @@
     currentId = null;
     bookView.classList.add('hidden');
     dashView.classList.remove('hidden');
+    updateShelfModeUI();
     renderShelf();
     window.scrollTo(0, 0);
   }
@@ -1443,10 +1553,93 @@
   const coverImg = document.getElementById('coverImg');
   const coverHint = document.getElementById('coverHint');
   const coverInput = document.getElementById('coverInput');
+  const reviewerOneLabel = document.getElementById('reviewerOneLabel');
+  const reviewerTwoLabel = document.getElementById('reviewerTwoLabel');
+  const reviewerOneCard = document.getElementById('reviewerOneCard');
+  const reviewerTwoCard = document.getElementById('reviewerTwoCard');
+  const reviewerOneLockNote = document.getElementById('reviewerOneLockNote');
+  const reviewerTwoLockNote = document.getElementById('reviewerTwoLockNote');
+  const reviewDivider = document.getElementById('reviewDivider');
+  let activeShelfRow = null;
+
+  function saveCurrentReaderName() {
+    if (!signedIn()) return;
+    db.readerNames = db.readerNames || {};
+    db.readerNames[auth.user.id] = displayNameFromUser(auth.user);
+  }
+
+  function readerName(userId, fallback) {
+    if (!userId) return fallback;
+    if (db.readerNames && db.readerNames[userId]) return db.readerNames[userId];
+    if (auth && auth.user && auth.user.id === userId) return displayNameFromUser(auth.user);
+    return fallback;
+  }
+
+  function titleCaseName(name) {
+    name = String(name || '').trim();
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  function reviewerPrefixForCurrentUser() {
+    if (shelfMode !== 'shared') return 'me';
+    if (!activeShelfRow || !auth || !auth.user) return 'me';
+    if (activeShelfRow.owner_id === auth.user.id) return 'me';
+    if (activeShelfRow.friend_id === auth.user.id) return 'fr';
+    return null;
+  }
+
+  function setReviewControlsLocked(prefix, locked) {
+    fieldEls.forEach(el => {
+      if (!el.dataset.key || !el.dataset.key.startsWith(prefix + '_')) return;
+      el.disabled = locked;
+      const row = el.closest('.fieldrow') || el;
+      row.classList.toggle('locked-field', locked);
+    });
+    starBoxes.forEach(box => {
+      if (box.dataset.stars !== 'rating_' + prefix) return;
+      box.classList.toggle('locked-field', locked);
+      [...box.querySelectorAll('button')].forEach(btn => btn.disabled = locked);
+    });
+    chipGroups.forEach(group => {
+      if (!group.dataset.chips || !group.dataset.chips.startsWith(prefix + '_')) return;
+      group.classList.toggle('locked-field', locked);
+      [...group.querySelectorAll('button')].forEach(btn => btn.disabled = locked);
+    });
+  }
+
+  function updateReviewModeUI() {
+    document.body.classList.toggle('solo-mode', shelfMode === 'solo');
+    const currentName = titleCaseName(displayNameFromUser(auth && auth.user)) || 'My';
+    if (shelfMode === 'solo') {
+      reviewerOneLabel.textContent = currentName + "'s Review";
+      reviewerTwoLabel.textContent = "Friend's Review";
+      if (reviewDivider) reviewDivider.innerHTML = '&#10086; &#10086; &#10086; &nbsp;my reading journal&nbsp; &#10086; &#10086; &#10086;';
+      setReviewControlsLocked('me', false);
+      setReviewControlsLocked('fr', true);
+      reviewerOneLockNote.classList.add('hidden');
+      reviewerTwoLockNote.classList.add('hidden');
+      return;
+    }
+
+    const ownerName = titleCaseName(readerName(activeShelfRow && activeShelfRow.owner_id, 'User 1'));
+    const friendName = titleCaseName(readerName(activeShelfRow && activeShelfRow.friend_id, 'User 2'));
+    reviewerOneLabel.textContent = ownerName + "'s Review";
+    reviewerTwoLabel.textContent = friendName + "'s Review";
+    if (reviewDivider) reviewDivider.innerHTML = '&#10086; &#10086; &#10086; &nbsp;read together, reviewed together&nbsp; &#10086; &#10086; &#10086;';
+
+    const editable = reviewerPrefixForCurrentUser();
+    const lockOne = editable !== 'me';
+    const lockTwo = editable !== 'fr';
+    setReviewControlsLocked('me', lockOne);
+    setReviewControlsLocked('fr', lockTwo);
+    reviewerOneLockNote.classList.toggle('hidden', !lockOne);
+    reviewerTwoLockNote.classList.toggle('hidden', !lockTwo);
+  }
 
   fieldEls.forEach(el => {
     el.addEventListener('input', () => {
-      if (!book()) return;
+      if (!book() || el.disabled) return;
       book().fields[el.dataset.key] = el.value;
       book().updatedAt = Date.now();
       autosave();
@@ -1461,7 +1654,7 @@
       btn.textContent = '★';
       btn.setAttribute('aria-label', i + ' star' + (i > 1 ? 's' : ''));
       btn.addEventListener('click', () => {
-        if (!book()) return;
+        if (!book() || btn.disabled || box.classList.contains('locked-field')) return;
         book().stars[key] = (book().stars[key] === i) ? 0 : i; /* re-click clears */
         book().updatedAt = Date.now();
         paintStars(box);
@@ -1481,7 +1674,7 @@
     [...group.children].forEach(chip => {
       chip.type = 'button';
       chip.addEventListener('click', () => {
-        if (!book()) return;
+        if (!book() || chip.disabled || group.classList.contains('locked-field')) return;
         book().chips[key] = (book().chips[key] === chip.dataset.value) ? null : chip.dataset.value;
         book().updatedAt = Date.now();
         paintChips(group);
@@ -1516,11 +1709,13 @@
 
   function populate() {
     const b = book();
+    saveCurrentReaderName();
     fieldEls.forEach(el => el.value = b.fields[el.dataset.key] || '');
     starBoxes.forEach(paintStars);
     chipGroups.forEach(paintChips);
     showCover(b.cover);
     coverInput.value = '';
+    updateReviewModeUI();
   }
 
   function openBook(id) {
@@ -1528,6 +1723,7 @@
     populate();
     dashView.classList.add('hidden');
     bookView.classList.remove('hidden');
+    updateReviewModeUI();
     window.scrollTo(0, 0);
   }
 
@@ -1567,7 +1763,7 @@
      ============================================================ */
   const syncStatusEl = document.getElementById('syncStatus');
   const setStatus = msg => { syncStatusEl.innerHTML = msg; };
-  const configured = () => !!(hasSupabaseConfig() && signedIn() && cfg.code);
+  const configured = () => !!(shelfMode === 'shared' && hasSupabaseConfig() && signedIn() && cfg.code);
   const invitePanel = document.getElementById('invitePanel');
   const inviteCodeText = document.getElementById('inviteCodeText');
   const inviteLinkText = document.getElementById('inviteLinkText');
@@ -1611,6 +1807,7 @@
   }
 
   function updateInviteUI(row) {
+    if (row) activeShelfRow = row;
     const hasCode = !!cfg.code;
     inviteCodeText.textContent = hasCode ? cfg.code : 'not created yet';
     inviteLinkText.value = hasCode ? buildInviteLink() : '';
@@ -1671,19 +1868,29 @@
   }
 
   async function joinLockedShelf(code) {
+    shelfMode = 'shared';
+    localStorage.setItem(MODE_KEY, shelfMode);
     const row = await sharedFetch('/rest/v1/rpc/join_shared_shelf', {
       method: 'POST',
       body: JSON.stringify({ p_code: code })
     });
+    activeShelfRow = row;
     if (row && row.data) mergeDb(row.data);
     cfg.code = code;
+    saveCurrentReaderName();
     saveCfg();
     saveDB();
+    updateShelfModeUI();
     updateInviteUI(row);
+    updateReviewModeUI();
     return row;
   }
 
   async function createLockedShelf() {
+    shelfMode = 'shared';
+    localStorage.setItem(MODE_KEY, shelfMode);
+    updateShelfModeUI();
+    saveCurrentReaderName();
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = makeInviteCode();
       try {
@@ -1698,9 +1905,11 @@
           })
         });
         const row = Array.isArray(rows) ? rows[0] : rows;
+        activeShelfRow = row;
         cfg.code = code;
         saveCfg();
         updateInviteUI(row);
+        updateReviewModeUI();
         return row;
       } catch (err) {
         if (/duplicate|23505/i.test(String(err.message || err)) && attempt < 4) continue;
@@ -1719,8 +1928,9 @@
     return 'shared shelf synced &#10084;';
   }
 
-  const incomingCode = parseShelfCode(window.location.href);
   if (incomingCode && incomingCode !== cfg.code) {
+    shelfMode = 'shared';
+    localStorage.setItem(MODE_KEY, shelfMode);
     cfg.code = incomingCode;
     saveCfg();
   }
@@ -1728,6 +1938,7 @@
   document.getElementById('createInviteBtn').addEventListener('click', async () => {
     if (!hasSupabaseConfig()) { setStatus('site owner setup needed &mdash; add Supabase settings inside index.html'); return; }
     if (!signedIn()) { setStatus('sign in first to create a locked invite &#10084;'); return; }
+    if (shelfMode !== 'shared') setShelfMode('shared');
     try {
       if (cfg.code) {
         const makeNew = confirm('You already have a shared shelf code. Create a brand new locked shelf instead? Choose Cancel to keep using the current one.');
@@ -1767,8 +1978,12 @@
   document.getElementById('cfgSaveBtn').addEventListener('click', async () => {
     const code = parseShelfCode(document.getElementById('cfgCode').value);
     if (!code) { setStatus('paste an invite link or code first'); return; }
+    shelfMode = 'shared';
+    localStorage.setItem(MODE_KEY, shelfMode);
     cfg.code = code;
     saveCfg();
+    loadDB();
+    updateShelfModeUI();
     updateInviteUI();
     document.getElementById('syncSetup').classList.add('hidden');
     if (!signedIn()) { setStatus('sign in first to join this locked shared shelf &#10084;'); return; }
@@ -1790,6 +2005,8 @@
   /* merge a remote copy of the shelf into ours */
   function mergeDb(remote) {
     if (!remote || !remote.books) return;
+    db.readerNames = Object.assign({}, remote.readerNames || {}, db.readerNames || {});
+    saveCurrentReaderName();
     db.deleted = db.deleted || {};
     const rDel = remote.deleted || {};
     Object.keys(rDel).forEach(id => {
@@ -1818,6 +2035,9 @@
 
   let syncing = false;
   async function syncNow() {
+    if (shelfMode !== 'shared') {
+      return;
+    }
     if (!hasSupabaseConfig()) {
       setStatus('site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
       return;
@@ -1836,7 +2056,11 @@
     try {
       let row = await getSharedShelfRow(cfg.code);
       if (!row) row = await joinLockedShelf(cfg.code);
-      else if (row.data) mergeDb(row.data);
+      else {
+        activeShelfRow = row;
+        if (row.data) mergeDb(row.data);
+      }
+      saveCurrentReaderName();
 
       const updated = await sharedFetch('/rest/v1/shared_shelves?id=eq.' + encodeURIComponent(cfg.code), {
         method: 'PATCH',
@@ -1844,10 +2068,12 @@
         body: JSON.stringify({ data: db, updated_at: new Date().toISOString() })
       });
       row = Array.isArray(updated) && updated[0] ? updated[0] : row;
+      activeShelfRow = row;
       saveDB();
       if (currentId) { if (book()) populate(); else showDash(); }
       else renderShelf();
       updateInviteUI(row);
+      updateReviewModeUI();
       setStatus(shelfStatus(row));
     } catch (err) {
       setStatus(friendlySyncError(err));

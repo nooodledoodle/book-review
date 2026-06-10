@@ -1377,6 +1377,83 @@
   /* extra hearts only show while the sign-in screen is up */
   #heartField span.extra { display: none; }
   #heartField.dense span.extra { display: block; }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER 5 - header redesign
+     title perfectly centered, controls in one tidy toolbar row
+     ============================================================ */
+  .app-topbar {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "title title"
+      "left  right";
+    row-gap: 18px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1.5px dashed var(--rule);
+    margin-bottom: 12px;
+  }
+  .top-title { grid-area: title; }
+  .top-left  { grid-area: left; }
+  .top-right { grid-area: right; }
+  .masthead-sub { margin-bottom: 2px; }
+
+  /* identity lives right under the title, like a signature */
+  .top-title .userbar {
+    margin: 8px auto 0;
+    padding: 0;
+    border: none;
+    max-width: none;
+  }
+
+  /* shelf tabs become one segmented switch */
+  #shelfModeBar {
+    background: var(--cream);
+    border: 1.5px dashed var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    gap: 4px;
+    box-shadow: 2px 2px 0 var(--shadow-ink);
+  }
+  #shelfModeBar .btn {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 8px 16px;
+  }
+  #shelfModeBar .btn:hover { transform: none; background: var(--star-off); }
+  #shelfModeBar .btn.active { background: var(--star-on); color: #fff7f0; box-shadow: none; }
+
+  /* New Book is the page's one true call-to-action */
+  #newBookBtn {
+    background: var(--star-on);
+    border-style: solid;
+    border-color: var(--star-on);
+    color: #fff7f0;
+  }
+  #newBookBtn:hover { background: var(--star-on); filter: brightness(1.08); }
+
+  /* theme dots sit in a small matching tray */
+  .theme-dots {
+    background: var(--cream);
+    border: 1.5px dashed var(--line);
+    border-radius: 999px;
+    padding: 6px 13px;
+    box-shadow: 2px 2px 0 var(--shadow-ink);
+  }
+
+  /* helper caption hangs just under the divider */
+  .mode-helper { margin: 0 0 18px; }
+
+  @media (max-width: 860px) {
+    .app-topbar {
+      grid-template-columns: 1fr;
+      grid-template-areas: "title" "left" "right";
+      row-gap: 12px;
+    }
+    .top-left, .top-right { justify-content: center; flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
@@ -2917,6 +2994,13 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
   }
+})();
+
+/* ---------- identity under the title ---------- */
+(function () {
+  const bar = document.getElementById('userBar');
+  const title = document.querySelector('.top-title');
+  if (bar && title) title.appendChild(bar);
 })();
 
 /* ---------- floating hearts ---------- */

@@ -710,6 +710,7 @@
     <div class="fieldrow hidden" id="authEmailRow"><label>Email:</label><input type="email" id="authEmail" autocomplete="email"></div>
     <div class="fieldrow"><label>Password:</label><input type="password" id="authPassword" autocomplete="current-password"></div>
 
+
     <div class="auth-actions">
       <button class="btn" id="authSubmitBtn" type="button">Sign In</button>
     </div>
@@ -1029,12 +1030,29 @@
     /* connection details are stored in code constants, not shown in the sign-in UI */
   }
 
+  function loadSavedAuthForm() {
+    authUser.value = '';
+    authEmail.value = '';
+    authPassword.value = '';
+  }
+
+  function saveOrForgetAuthForm(username, email) {
+    /* No in-app remembering. Browser autocomplete/password manager can save info if the user chooses. */
+  }
+
+  function clearAuthFormAfterSuccess() {
+    authUser.value = '';
+    authEmail.value = '';
+    authPassword.value = '';
+  }
+
   function setAuthMode(mode) {
     authMode = mode;
     signInTab.classList.toggle('active', mode === 'signin');
     signUpTab.classList.toggle('active', mode === 'signup');
     authEmailRow.classList.toggle('hidden', mode !== 'signup');
     authPassword.autocomplete = mode === 'signin' ? 'current-password' : 'new-password';
+    authPassword.value = '';
     authSubmitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
     setAuthStatus('');
   }
@@ -1165,6 +1183,7 @@
     appShell.classList.add('hidden');
     authView.classList.remove('hidden');
     fillAuthConfig();
+    loadSavedAuthForm();
     updateUserBar();
     window.scrollTo(0, 0);
   }
@@ -1223,15 +1242,21 @@
         if (data.access_token) {
           rememberSession(data);
           await ensureProfile(username, email);
+          saveOrForgetAuthForm(username, email);
+          clearAuthFormAfterSuccess();
           await startApp();
         } else {
-          setAuthStatus('account created &#10084; check your email if confirmation is turned on, then sign in with your user and password');
+          saveOrForgetAuthForm(username, email);
           setAuthMode('signin');
+          clearAuthFormAfterSuccess();
+          setAuthStatus('account created &#10084; check your email if confirmation is turned on, then sign in with your user and password');
         }
       } else {
         email = await getEmailForUsername(username);
         const data = await supabaseAuth('/auth/v1/token?grant_type=password', { email, password });
         rememberSession(data);
+        saveOrForgetAuthForm(username, email);
+        clearAuthFormAfterSuccess();
         await startApp();
       }
     } catch (err) {

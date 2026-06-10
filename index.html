@@ -622,6 +622,61 @@
 
   .hidden { display: none !important; }
 
+
+
+  .invite-panel {
+    background: rgba(255,255,255,.10);
+    border: 2px dashed var(--line);
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .invite-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .invite-card {
+    background: var(--cream);
+    border: 1px solid rgba(120,80,80,.25);
+    box-shadow: 1px 2px 0 rgba(60,30,30,.08);
+    padding: 10px 12px;
+  }
+  .invite-label {
+    display: block;
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: .72rem;
+    letter-spacing: .12em;
+    color: var(--line);
+    margin-bottom: 8px;
+    text-transform: lowercase;
+  }
+  .invite-code {
+    font-family: var(--type);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink-dark);
+    overflow-wrap: anywhere;
+  }
+  .invite-link-row input[readonly] {
+    cursor: text;
+  }
+  .locked-pill {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: var(--type);
+    font-size: .7rem;
+    letter-spacing: .08em;
+    color: #fff7f0;
+    background: var(--star-on);
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+  @media (max-width: 760px) {
+    .invite-grid { grid-template-columns: 1fr; }
+  }
+
   @media (max-width: 760px) {
     .layout, .reviewers { grid-template-columns: 1fr; }
     .cover-box { max-width: 280px; margin-left: auto; margin-right: auto; }
@@ -644,7 +699,7 @@
 <div class="auth-screen" id="authView">
   <div class="auth-card">
     <h1>BOOK&nbsp;REVIEW</h1>
-    <p class="auth-subtitle">sign in to save your shelf<br>or make a new reading account</p>
+    <p class="auth-subtitle">sign in to create a locked shared shelf<br>or continue locally as a guest</p>
 
     <div class="auth-tabs">
       <button class="auth-tab active" id="signInTab" type="button">Sign In</button>
@@ -695,15 +750,34 @@
       <span class="frame-label">Shared Shelf</span>
       <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
       <div class="toolbar" style="margin-bottom:10px">
+        <button class="btn" id="createInviteBtn">&#10084; Create Locked Invite</button>
+        <button class="btn" id="copyInviteBtn">Copy Invite Link</button>
+        <button class="btn" id="copyCodeBtn">Copy Code</button>
+        <button class="btn" id="syncSetupBtn">Join with Code</button>
         <button class="btn" id="syncNowBtn">&#8635; Sync Now</button>
-        <button class="btn" id="syncSetupBtn">&#9881; Set Up Sharing</button>
       </div>
-      <div id="syncSetup" class="hidden">
-        <div class="fieldrow"><label>Shelf code:</label><input type="text" id="cfgCode" placeholder="a secret you both share, e.g. meows-bestie-7741"></div>
-        <div class="toolbar" style="margin-bottom:4px">
-          <button class="btn" id="cfgSaveBtn">&#10084; Save &amp; Connect</button>
+
+      <div id="invitePanel" class="invite-panel hidden">
+        <div class="invite-grid">
+          <div class="invite-card">
+            <span class="invite-label">locked invite code</span>
+            <div class="invite-code" id="inviteCodeText">not created yet</div>
+            <span class="locked-pill" id="inviteLockPill">two-person shelf</span>
+          </div>
+          <div class="invite-card invite-link-row">
+            <span class="invite-label">invite link</span>
+            <input type="text" id="inviteLinkText" readonly>
+          </div>
         </div>
-        <p class="sync-hint">share the same shelf code with your friend to sync one shared bookshelf</p>
+        <p class="sync-hint">send this to one friend only. once one friend joins, the shelf locks to the two signed-in accounts.</p>
+      </div>
+
+      <div id="syncSetup" class="hidden">
+        <div class="fieldrow"><label>Invite code/link:</label><input type="text" id="cfgCode"></div>
+        <div class="toolbar" style="margin-bottom:4px">
+          <button class="btn" id="cfgSaveBtn">&#10084; Join Shared Shelf</button>
+        </div>
+        <p class="sync-hint">paste the invite link or code your friend sent you. joining requires a signed-in account.</p>
       </div>
     </div>
 
@@ -874,8 +948,8 @@
   /* OWNER SETUP:
      Paste your Supabase project URL and public anon key here before publishing.
      Do NOT use your Supabase service_role key in frontend code. */
-  const SUPABASE_URL = ''; // example: 'https://your-project-id.supabase.co'
-  const SUPABASE_ANON_KEY = ''; // paste the public anon key from Supabase
+  const SUPABASE_URL = 'https://fltddfytlvedtxkpntvd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsdGRkZnl0bHZlZHR4a3BudHZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNTE4OTUsImV4cCI6MjA5NjYyNzg5NX0.nkSscmB3xVxCsXL5yFS_0-JSwCwFOesx4o6tOB9BB1E';
 
   let cfg = { code: '' };
   let auth = null;
@@ -888,6 +962,7 @@
   const supabaseUrl = () => (SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const supabaseKey = () => (SUPABASE_ANON_KEY || '').trim();
   const hasSupabaseConfig = () => !!(supabaseUrl() && supabaseKey());
+  const signedIn = () => !!(auth && auth.access_token && auth.user && auth.user.id);
 
   const blankDb = () => ({ books: {}, order: [], theme: 'pink', deleted: {} });
   let db = blankDb();
@@ -995,7 +1070,7 @@
 
   function updateUserBar() {
     const email = auth && auth.user && auth.user.email;
-    userLabel.innerHTML = email ? 'signed in as ' + esc(email) : 'guest mode &mdash; saved only on this browser';
+    userLabel.innerHTML = email ? 'signed in as ' + esc(email) : 'guest mode &mdash; local only';
   }
 
   function showAuth() {
@@ -1015,8 +1090,15 @@
     updateUserBar();
     applyTheme();
     showDash();
-    if (configured()) syncNow();
-    else setStatus(hasSupabaseConfig() ? 'not connected &mdash; add a shelf code to link with your bestie &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+    updateInviteUI();
+    if (cfg.code && signedIn()) {
+      if (incomingCode) setStatus('joining locked invite &#10084; syncing shared shelf...');
+      syncNow();
+    } else if (cfg.code && !signedIn()) {
+      setStatus('sign in to join this locked shared shelf &#10084;');
+    } else {
+      setStatus(hasSupabaseConfig() ? 'not connected &mdash; create a locked invite or join with a code &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+    }
   }
 
   signInTab.addEventListener('click', () => setAuthMode('signin'));
@@ -1348,14 +1430,205 @@
   document.getElementById('printBtn').addEventListener('click', () => window.print());
 
   /* ============================================================
-     SHARED SHELF SYNC
-     Talks to a free Supabase project over its REST API.
-     One row per "shelf code"; merge is last-write-wins per book.
-     Works offline: changes stay in localStorage and sync later.
+     LOCKED SHARED SHELF SYNC
+     Uses Supabase Auth + public.shared_shelves.
+     Real-app behavior:
+     - You must be signed in to create or join a shared shelf.
+     - The invite code can be claimed by exactly one friend.
+     - After owner + friend are set, RLS blocks everyone else.
      ============================================================ */
   const syncStatusEl = document.getElementById('syncStatus');
   const setStatus = msg => { syncStatusEl.innerHTML = msg; };
-  const configured = () => !!(hasSupabaseConfig() && cfg.code);
+  const configured = () => !!(hasSupabaseConfig() && signedIn() && cfg.code);
+  const invitePanel = document.getElementById('invitePanel');
+  const inviteCodeText = document.getElementById('inviteCodeText');
+  const inviteLinkText = document.getElementById('inviteLinkText');
+  const inviteLockPill = document.getElementById('inviteLockPill');
+
+  function parseShelfCode(value) {
+    let raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const u = new URL(raw);
+      raw = u.searchParams.get('shelf') || u.searchParams.get('invite') || '';
+      if (!raw && u.hash) raw = new URLSearchParams(u.hash.replace(/^#/, '')).get('shelf') || '';
+    } catch (e) {
+      if (raw.indexOf('shelf=') !== -1 || raw.indexOf('invite=') !== -1) {
+        const queryPart = raw.split('?').pop().replace(/^#/, '');
+        raw = new URLSearchParams(queryPart).get('shelf') || new URLSearchParams(queryPart).get('invite') || raw;
+      }
+    }
+    return raw.replace(/^#?shelf=/i, '').replace(/^#?invite=/i, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+  }
+
+  function makeInviteCode() {
+    const words = ['rose', 'shelf', 'novel', 'pages', 'quote', 'chapter', 'bookmark', 'story', 'bestie'];
+    const bytes = new Uint8Array(5);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    return 'brj-' + words[Math.floor(Math.random() * words.length)] + '-' + hex;
+  }
+
+  function buildInviteLink() {
+    if (!cfg.code) return '';
+    const u = new URL(window.location.href);
+    u.searchParams.set('shelf', cfg.code);
+    u.hash = '';
+    return u.toString();
+  }
+
+  function saveCfg() {
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  }
+
+  function updateInviteUI(row) {
+    const hasCode = !!cfg.code;
+    inviteCodeText.textContent = hasCode ? cfg.code : 'not created yet';
+    inviteLinkText.value = hasCode ? buildInviteLink() : '';
+    document.getElementById('copyInviteBtn').disabled = !hasCode;
+    document.getElementById('copyCodeBtn').disabled = !hasCode;
+    if (inviteLockPill) {
+      if (!hasCode) inviteLockPill.textContent = 'two-person shelf';
+      else if (row && row.owner_id && row.friend_id) inviteLockPill.textContent = 'locked to 2 readers';
+      else inviteLockPill.textContent = 'waiting for 1 friend';
+    }
+    if (hasCode) invitePanel.classList.remove('hidden');
+  }
+
+  async function copyText(value, successMsg) {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast(successMsg);
+    } catch (e) {
+      inviteLinkText.focus();
+      inviteLinkText.select();
+      showToast('copy it from the box above');
+    }
+  }
+
+  function friendlySyncError(err) {
+    const msg = String((err && err.message) || err || '');
+    if (/already full/i.test(msg)) return 'this shared shelf is already full &mdash; it is locked to two readers';
+    if (/not found/i.test(msg)) return 'invite code not found &mdash; double-check the link or code';
+    if (/JWT|token|401|invalid/i.test(msg)) return 'please sign in again before syncing';
+    if (/relation .*shared_shelves|404|schema cache/i.test(msg)) return 'database setup needed &mdash; run the shared_shelves SQL in Supabase first';
+    return esc(msg || 'could not sync');
+  }
+
+  async function sharedFetch(path, options) {
+    await refreshSessionIfNeeded();
+    if (!signedIn()) throw new Error('Sign in first to use a locked shared shelf.');
+    if (!hasSupabaseConfig()) throw new Error('Site owner needs to add Supabase settings first.');
+    const headers = Object.assign({
+      apikey: supabaseKey(),
+      Authorization: 'Bearer ' + auth.access_token,
+      'Content-Type': 'application/json'
+    }, (options && options.headers) || {});
+    const res = await fetch(supabaseUrl() + path, Object.assign({}, options || {}, { headers }));
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
+    if (!res.ok) {
+      const msg = data && (data.message || data.error_description || data.msg || data.details);
+      throw new Error(msg || ('server said ' + res.status));
+    }
+    return data;
+  }
+
+  async function getSharedShelfRow(code) {
+    const rows = await sharedFetch('/rest/v1/shared_shelves?id=eq.' + encodeURIComponent(code) + '&select=id,owner_id,friend_id,data,updated_at', { method: 'GET' });
+    return rows && rows[0] ? rows[0] : null;
+  }
+
+  async function joinLockedShelf(code) {
+    const row = await sharedFetch('/rest/v1/rpc/join_shared_shelf', {
+      method: 'POST',
+      body: JSON.stringify({ p_code: code })
+    });
+    if (row && row.data) mergeDb(row.data);
+    cfg.code = code;
+    saveCfg();
+    saveDB();
+    updateInviteUI(row);
+    return row;
+  }
+
+  async function createLockedShelf() {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = makeInviteCode();
+      try {
+        const rows = await sharedFetch('/rest/v1/shared_shelves', {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({
+            id: code,
+            owner_id: auth.user.id,
+            data: db,
+            updated_at: new Date().toISOString()
+          })
+        });
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        cfg.code = code;
+        saveCfg();
+        updateInviteUI(row);
+        return row;
+      } catch (err) {
+        if (/duplicate|23505/i.test(String(err.message || err)) && attempt < 4) continue;
+        throw err;
+      }
+    }
+    throw new Error('Could not create a unique invite code. Try again.');
+  }
+
+  function shelfStatus(row) {
+    if (!signedIn()) return 'sign in to create or join a locked shared shelf &#10084;';
+    if (!cfg.code) return 'not connected &mdash; create a locked invite or join with a code &#10084;';
+    if (row && row.owner_id === auth.user.id && !row.friend_id) return 'locked invite ready &#10084; waiting for your friend to join';
+    if (row && row.owner_id === auth.user.id && row.friend_id) return 'shared shelf locked &#10084; only you and your friend can sync here';
+    if (row && row.friend_id === auth.user.id) return 'joined shared shelf &#10084; locked to you and the owner';
+    return 'shared shelf synced &#10084;';
+  }
+
+  const incomingCode = parseShelfCode(window.location.href);
+  if (incomingCode && incomingCode !== cfg.code) {
+    cfg.code = incomingCode;
+    saveCfg();
+  }
+
+  document.getElementById('createInviteBtn').addEventListener('click', async () => {
+    if (!hasSupabaseConfig()) { setStatus('site owner setup needed &mdash; add Supabase settings inside index.html'); return; }
+    if (!signedIn()) { setStatus('sign in first to create a locked invite &#10084;'); return; }
+    try {
+      if (cfg.code) {
+        const makeNew = confirm('You already have a shared shelf code. Create a brand new locked shelf instead? Choose Cancel to keep using the current one.');
+        if (!makeNew) {
+          updateInviteUI();
+          await syncNow();
+          return;
+        }
+        cfg.code = '';
+        saveCfg();
+        updateInviteUI();
+      }
+      setStatus('creating locked invite...');
+      const row = await createLockedShelf();
+      updateInviteUI(row);
+      setStatus('locked invite ready &#10084; send it to one friend');
+    } catch (err) {
+      setStatus(friendlySyncError(err));
+    }
+  });
+
+  document.getElementById('copyInviteBtn').addEventListener('click', () => {
+    updateInviteUI();
+    copyText(buildInviteLink(), 'invite link copied &#10084;');
+  });
+
+  document.getElementById('copyCodeBtn').addEventListener('click', () => {
+    copyText(cfg.code, 'invite code copied &#10084;');
+  });
 
   document.getElementById('syncSetupBtn').addEventListener('click', () => {
     const box = document.getElementById('syncSetup');
@@ -1363,13 +1636,25 @@
     document.getElementById('cfgCode').value = cfg.code;
   });
 
-  document.getElementById('cfgSaveBtn').addEventListener('click', () => {
-    cfg.code = document.getElementById('cfgCode').value.trim();
-    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  document.getElementById('cfgSaveBtn').addEventListener('click', async () => {
+    const code = parseShelfCode(document.getElementById('cfgCode').value);
+    if (!code) { setStatus('paste an invite link or code first'); return; }
+    cfg.code = code;
+    saveCfg();
+    updateInviteUI();
     document.getElementById('syncSetup').classList.add('hidden');
-    if (configured()) syncNow();
-    else if (!hasSupabaseConfig()) setStatus('site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
-    else setStatus('not connected &mdash; enter a shelf code to link up');
+    if (!signedIn()) { setStatus('sign in first to join this locked shared shelf &#10084;'); return; }
+    setStatus('joining locked shelf...');
+    try {
+      const row = await joinLockedShelf(code);
+      saveDB();
+      if (currentId) { if (book()) populate(); else showDash(); }
+      else renderShelf();
+      setStatus(shelfStatus(row));
+      await syncNow();
+    } catch (err) {
+      setStatus(friendlySyncError(err));
+    }
   });
 
   document.getElementById('syncNowBtn').addEventListener('click', () => syncNow());
@@ -1400,36 +1685,44 @@
       if (!seen[id]) { seen[id] = true; order.push(id); }
     });
     db.order = order;
+    db.theme = db.theme || remote.theme || 'pink';
   }
 
   let syncing = false;
   async function syncNow() {
-    if (!configured()) {
-      setStatus(hasSupabaseConfig() ? 'not connected &mdash; add a shelf code to link with your bestie &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+    if (!hasSupabaseConfig()) {
+      setStatus('site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+      return;
+    }
+    if (!signedIn()) {
+      setStatus(cfg.code ? 'sign in to join this locked shared shelf &#10084;' : 'guest mode is local only &mdash; sign in to create or join a shared shelf');
+      return;
+    }
+    if (!cfg.code) {
+      setStatus('not connected &mdash; create a locked invite or join with a code &#10084;');
       return;
     }
     if (syncing) return;
     syncing = true;
-    setStatus('syncing...');
+    setStatus('syncing locked shelf...');
     try {
-      const h = { apikey: supabaseKey(), Authorization: 'Bearer ' + ((auth && auth.access_token) || supabaseKey()), 'Content-Type': 'application/json' };
-      const url = supabaseUrl() + '/rest/v1/shelves';
-      const res = await fetch(url + '?id=eq.' + encodeURIComponent(cfg.code) + '&select=data', { headers: h });
-      if (!res.ok) throw new Error('server said ' + res.status);
-      const rows = await res.json();
-      if (rows.length) mergeDb(rows[0].data);
-      const up = await fetch(url, {
-        method: 'POST',
-        headers: Object.assign({ Prefer: 'resolution=merge-duplicates' }, h),
-        body: JSON.stringify([{ id: cfg.code, data: db, updated_at: new Date().toISOString() }])
+      let row = await getSharedShelfRow(cfg.code);
+      if (!row) row = await joinLockedShelf(cfg.code);
+      else if (row.data) mergeDb(row.data);
+
+      const updated = await sharedFetch('/rest/v1/shared_shelves?id=eq.' + encodeURIComponent(cfg.code), {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ data: db, updated_at: new Date().toISOString() })
       });
-      if (!up.ok) throw new Error('server said ' + up.status);
+      row = Array.isArray(updated) && updated[0] ? updated[0] : row;
       saveDB();
       if (currentId) { if (book()) populate(); else showDash(); }
       else renderShelf();
-      setStatus('shared shelf synced &#10084; code: ' + esc(cfg.code));
+      updateInviteUI(row);
+      setStatus(shelfStatus(row));
     } catch (err) {
-      setStatus('could not reach the shared shelf &mdash; changes are saved here and will sync later');
+      setStatus(friendlySyncError(err));
     }
     syncing = false;
   }

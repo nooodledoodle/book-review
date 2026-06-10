@@ -3,7 +3,7 @@
 {
   "name": "Book Review Journal",
   "schemaVersion": 1,
-  "description": "Pink vintage-journal book review template two friends can fill out together; saves entries in localStorage, printable."
+  "description": "Pink vintage-journal book review template with sign in/sign up, shared shelves, local saves, and print view."
 }
 </script>
 <html lang="en">
@@ -362,7 +362,7 @@
     color: var(--ink-dark);
     white-space: nowrap;
   }
-  input[type="text"], input[type="date"], select {
+  input[type="text"], input[type="email"], input[type="password"], input[type="date"], select {
     flex: 1;
     min-width: 0;
     border: none;
@@ -509,6 +509,117 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+
+
+  /* ============================================================
+     SIGN IN / SIGN UP
+     ============================================================ */
+  .auth-screen {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 0 42px;
+  }
+  .auth-card {
+    width: min(560px, 94vw);
+    border: 2.5px dashed var(--line);
+    background: rgba(255,255,255,.12);
+    padding: 24px 20px 20px;
+    box-shadow: 6px 8px 0 rgba(94,50,50,.10);
+  }
+  .auth-card h1 {
+    font-family: var(--type);
+    font-size: clamp(1.8rem, 8vw, 3rem);
+    letter-spacing: .28em;
+    text-indent: .28em;
+    color: var(--ink-dark);
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .auth-card .auth-subtitle {
+    text-align: center;
+    font-family: var(--type);
+    color: var(--line);
+    letter-spacing: .12em;
+    line-height: 1.6;
+    margin: 0 0 18px;
+    font-size: .78rem;
+  }
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .auth-tab {
+    font-family: var(--type);
+    color: var(--ink-dark);
+    background: var(--cream);
+    border: 2px dashed var(--line);
+    padding: 9px 10px;
+    cursor: pointer;
+    letter-spacing: .08em;
+  }
+  .auth-tab.active {
+    background: var(--star-on);
+    color: #fff7f0;
+    border-style: solid;
+  }
+  .auth-mini {
+    font-family: var(--type);
+    font-size: .75rem;
+    line-height: 1.55;
+    color: var(--line);
+    margin: 6px 2px 14px;
+  }
+  .auth-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+  .auth-status {
+    min-height: 22px;
+    text-align: center;
+    font-family: var(--type);
+    color: var(--ink-dark);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  .auth-details {
+    margin-top: 14px;
+    border-top: 1.5px dashed var(--line);
+    padding-top: 12px;
+  }
+  .auth-details summary {
+    font-family: var(--type);
+    color: var(--ink-dark);
+    cursor: pointer;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .userbar {
+    max-width: 760px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-family: var(--type);
+    color: var(--line);
+    font-size: .78rem;
+    letter-spacing: .08em;
+  }
+  .userbar .btn {
+    padding: 6px 12px;
+    font-size: .72rem;
+  }
+
   .hidden { display: none !important; }
 
   @media (max-width: 760px) {
@@ -530,10 +641,36 @@
 </style>
 </head>
 <body>
-<div class="page">
+<div class="auth-screen" id="authView">
+  <div class="auth-card">
+    <h1>BOOK&nbsp;REVIEW</h1>
+    <p class="auth-subtitle">sign in to save your shelf<br>or make a new reading account</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="signInTab" type="button">Sign In</button>
+      <button class="auth-tab" id="signUpTab" type="button">Sign Up</button>
+    </div>
+
+    <div class="fieldrow"><label>Email:</label><input type="email" id="authEmail"></div>
+    <div class="fieldrow"><label>Password:</label><input type="password" id="authPassword"></div>
+
+    <div class="auth-actions">
+      <button class="btn" id="authSubmitBtn" type="button">Sign In</button>
+      <button class="btn" id="guestBtn" type="button">Continue as Guest</button>
+    </div>
+    <div class="auth-status" id="authStatus"></div>
+  </div>
+</div>
+
+<div class="page hidden" id="appShell">
 
   <h1 class="masthead">BOOK&nbsp;REVIEW</h1>
   <p class="masthead-sub">— a shared reading journal —</p>
+
+  <div class="userbar no-print" id="userBar">
+    <span id="userLabel">guest mode</span>
+    <button class="btn" id="signOutBtn" type="button">Sign Out</button>
+  </div>
 
   <div class="theme-dots no-print" id="themeDots">
     <span>theme:</span>
@@ -562,13 +699,11 @@
         <button class="btn" id="syncSetupBtn">&#9881; Set Up Sharing</button>
       </div>
       <div id="syncSetup" class="hidden">
-        <div class="fieldrow"><label>Supabase URL:</label><input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co"></div>
-        <div class="fieldrow"><label>Anon key:</label><input type="text" id="cfgKey" placeholder="paste the long anon public key"></div>
         <div class="fieldrow"><label>Shelf code:</label><input type="text" id="cfgCode" placeholder="a secret you both share, e.g. meows-bestie-7741"></div>
         <div class="toolbar" style="margin-bottom:4px">
           <button class="btn" id="cfgSaveBtn">&#10084; Save &amp; Connect</button>
         </div>
-        <p class="sync-hint">one-time setup &mdash; see SETUP-shared-shelf.md in your folder for the 5-minute guide</p>
+        <p class="sync-hint">share the same shelf code with your friend to sync one shared bookshelf</p>
       </div>
     </div>
 
@@ -730,32 +865,66 @@
    db.theme     = 'pink' | 'sage' | 'lavender' | 'beige'
    ============================================================ */
 (function () {
-  const STORAGE_KEY = 'bookReviewJournal.v2';
+  const STORAGE_PREFIX = 'bookReviewJournal.v3.';
+  const OLD_STORAGE_KEY = 'bookReviewJournal.v2';
   const LEGACY_KEY  = 'bookReviewJournal.v1';
+  const AUTH_KEY = 'bookReviewJournal.auth';
+  const CFG_KEY = 'bookReviewJournal.sync';
 
-  let db = { books: {}, order: [], theme: 'pink' };
+  /* OWNER SETUP:
+     Paste your Supabase project URL and public anon key here before publishing.
+     Do NOT use your Supabase service_role key in frontend code. */
+  const SUPABASE_URL = ''; // example: 'https://your-project-id.supabase.co'
+  const SUPABASE_ANON_KEY = ''; // paste the public anon key from Supabase
+
+  let cfg = { code: '' };
+  let auth = null;
+  try {
+    const savedCfg = JSON.parse(localStorage.getItem(CFG_KEY)) || {};
+    cfg.code = savedCfg.code || '';
+  } catch (e) { /* ignore */ }
+  try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { auth = null; }
+
+  const supabaseUrl = () => (SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const supabaseKey = () => (SUPABASE_ANON_KEY || '').trim();
+  const hasSupabaseConfig = () => !!(supabaseUrl() && supabaseKey());
+
+  const blankDb = () => ({ books: {}, order: [], theme: 'pink', deleted: {} });
+  let db = blankDb();
   let currentId = null;
 
-  /* ---------- load (with migration from the single-book v1) ---------- */
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && saved.books) db = Object.assign({ theme: 'pink' }, saved);
-  } catch (e) { /* start fresh */ }
-  try {
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    if (legacy && db.order.length === 0) {
-      const id = 'b' + Date.now().toString(36);
-      db.books[id] = {
-        fields: legacy.fields || {}, stars: legacy.stars || {},
-        chips: legacy.chips || {}, cover: legacy.cover || null,
-        createdAt: Date.now()
-      };
-      db.order.unshift(id);
-      localStorage.removeItem(LEGACY_KEY);
-    }
-  } catch (e) { /* ignore */ }
+  const userScope = () => (auth && auth.user && auth.user.id) ? 'user.' + auth.user.id : 'guest';
+  const storageKey = () => STORAGE_PREFIX + userScope();
 
-  const saveDB = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  /* ---------- load shelf data for the current signed-in user or guest ---------- */
+  function loadDB() {
+    db = blankDb();
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey()));
+      if (saved && saved.books) db = Object.assign(blankDb(), saved);
+      else {
+        /* migrate your existing published version into the first account that opens it */
+        const old = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
+        if (old && old.books) db = Object.assign(blankDb(), old);
+      }
+    } catch (e) { /* start fresh */ }
+
+    try {
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+      if (legacy && db.order.length === 0) {
+        const id = 'b' + Date.now().toString(36);
+        db.books[id] = {
+          fields: legacy.fields || {}, stars: legacy.stars || {},
+          chips: legacy.chips || {}, cover: legacy.cover || null,
+          createdAt: Date.now(), updatedAt: Date.now()
+        };
+        db.order.unshift(id);
+        localStorage.removeItem(LEGACY_KEY);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  const saveDB = () => localStorage.setItem(storageKey(), JSON.stringify(db));
   let saveTimer;
   const autosave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveDB, 400); scheduleSync(); };
   const book = () => db.books[currentId];
@@ -763,6 +932,135 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g,
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  /* ============================================================
+     AUTH - Supabase email/password auth for GitHub Pages
+     ============================================================ */
+  const authView = document.getElementById('authView');
+  const appShell = document.getElementById('appShell');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authStatus = document.getElementById('authStatus');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const signInTab = document.getElementById('signInTab');
+  const signUpTab = document.getElementById('signUpTab');
+  const userLabel = document.getElementById('userLabel');
+  let authMode = 'signin';
+
+  function setAuthStatus(msg) { authStatus.innerHTML = msg || ''; }
+
+  function fillAuthConfig() {
+    /* connection details are stored in code constants, not shown in the sign-in UI */
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    signInTab.classList.toggle('active', mode === 'signin');
+    signUpTab.classList.toggle('active', mode === 'signup');
+    authSubmitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
+    setAuthStatus('');
+  }
+
+  async function supabaseAuth(path, body, token) {
+    if (!hasSupabaseConfig()) throw new Error('Site owner needs to add the Supabase URL and anon key inside index.html first.');
+    const headers = { apikey: supabaseKey(), 'Content-Type': 'application/json' };
+    headers.Authorization = 'Bearer ' + (token || supabaseKey());
+    const res = await fetch(supabaseUrl() + path, { method: 'POST', headers, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error_description || data.msg || data.message || 'Something went wrong.');
+    return data;
+  }
+
+  function rememberSession(data) {
+    auth = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at || Math.floor(Date.now() / 1000) + (data.expires_in || 3600),
+      user: data.user
+    };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+  }
+
+  async function refreshSessionIfNeeded() {
+    if (!auth || !auth.refresh_token || !hasSupabaseConfig()) return;
+    const almostExpired = !auth.expires_at || (auth.expires_at * 1000) < Date.now() + 60000;
+    if (!almostExpired) return;
+    try {
+      const data = await supabaseAuth('/auth/v1/token?grant_type=refresh_token', { refresh_token: auth.refresh_token }, auth.access_token);
+      rememberSession(data);
+    } catch (e) {
+      localStorage.removeItem(AUTH_KEY);
+      auth = null;
+    }
+  }
+
+  function updateUserBar() {
+    const email = auth && auth.user && auth.user.email;
+    userLabel.innerHTML = email ? 'signed in as ' + esc(email) : 'guest mode &mdash; saved only on this browser';
+  }
+
+  function showAuth() {
+    currentId = null;
+    appShell.classList.add('hidden');
+    authView.classList.remove('hidden');
+    fillAuthConfig();
+    updateUserBar();
+    window.scrollTo(0, 0);
+  }
+
+  async function startApp() {
+    await refreshSessionIfNeeded();
+    loadDB();
+    appShell.classList.remove('hidden');
+    authView.classList.add('hidden');
+    updateUserBar();
+    applyTheme();
+    showDash();
+    if (configured()) syncNow();
+    else setStatus(hasSupabaseConfig() ? 'not connected &mdash; add a shelf code to link with your bestie &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+  }
+
+  signInTab.addEventListener('click', () => setAuthMode('signin'));
+  signUpTab.addEventListener('click', () => setAuthMode('signup'));
+
+  authSubmitBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if (!email || !password) { setAuthStatus('enter your email and password first'); return; }
+    setAuthStatus(authMode === 'signin' ? 'signing in...' : 'creating your account...');
+    authSubmitBtn.disabled = true;
+    try {
+      if (authMode === 'signup') {
+        const data = await supabaseAuth('/auth/v1/signup', { email, password });
+        if (data.access_token) {
+          rememberSession(data);
+          await startApp();
+        } else {
+          setAuthStatus('account created &#10084; check your email to confirm it, then sign in');
+          setAuthMode('signin');
+        }
+      } else {
+        const data = await supabaseAuth('/auth/v1/token?grant_type=password', { email, password });
+        rememberSession(data);
+        await startApp();
+      }
+    } catch (err) {
+      setAuthStatus(esc(err.message || 'could not sign in'));
+    }
+    authSubmitBtn.disabled = false;
+  });
+
+  document.getElementById('guestBtn').addEventListener('click', async () => {
+    auth = null;
+    localStorage.removeItem(AUTH_KEY);
+    await startApp();
+  });
+
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    saveDB();
+    auth = null;
+    localStorage.removeItem(AUTH_KEY);
+    showAuth();
+  });
   /* ============================================================
      THEME PICKER - sets data-theme on <html>
      ============================================================ */
@@ -1055,30 +1353,23 @@
      One row per "shelf code"; merge is last-write-wins per book.
      Works offline: changes stay in localStorage and sync later.
      ============================================================ */
-  const CFG_KEY = 'bookReviewJournal.sync';
-  let cfg = { url: '', key: '', code: '' };
-  try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) { /* ignore */ }
-
   const syncStatusEl = document.getElementById('syncStatus');
   const setStatus = msg => { syncStatusEl.innerHTML = msg; };
-  const configured = () => !!(cfg.url && cfg.key && cfg.code);
+  const configured = () => !!(hasSupabaseConfig() && cfg.code);
 
   document.getElementById('syncSetupBtn').addEventListener('click', () => {
     const box = document.getElementById('syncSetup');
     box.classList.toggle('hidden');
-    document.getElementById('cfgUrl').value = cfg.url;
-    document.getElementById('cfgKey').value = cfg.key;
     document.getElementById('cfgCode').value = cfg.code;
   });
 
   document.getElementById('cfgSaveBtn').addEventListener('click', () => {
-    cfg.url = document.getElementById('cfgUrl').value.trim().replace(/\/+$/, '');
-    cfg.key = document.getElementById('cfgKey').value.trim();
     cfg.code = document.getElementById('cfgCode').value.trim();
     localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
     document.getElementById('syncSetup').classList.add('hidden');
     if (configured()) syncNow();
-    else setStatus('not connected &mdash; fill in all three fields to link up');
+    else if (!hasSupabaseConfig()) setStatus('site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
+    else setStatus('not connected &mdash; enter a shelf code to link up');
   });
 
   document.getElementById('syncNowBtn').addEventListener('click', () => syncNow());
@@ -1114,15 +1405,15 @@
   let syncing = false;
   async function syncNow() {
     if (!configured()) {
-      setStatus('not connected &mdash; click "set up sharing" to link with your bestie &#10084;');
+      setStatus(hasSupabaseConfig() ? 'not connected &mdash; add a shelf code to link with your bestie &#10084;' : 'site owner setup needed &mdash; add Supabase URL and anon key inside index.html');
       return;
     }
     if (syncing) return;
     syncing = true;
     setStatus('syncing...');
     try {
-      const h = { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key, 'Content-Type': 'application/json' };
-      const url = cfg.url + '/rest/v1/shelves';
+      const h = { apikey: supabaseKey(), Authorization: 'Bearer ' + ((auth && auth.access_token) || supabaseKey()), 'Content-Type': 'application/json' };
+      const url = supabaseUrl() + '/rest/v1/shelves';
       const res = await fetch(url + '?id=eq.' + encodeURIComponent(cfg.code) + '&select=data', { headers: h });
       if (!res.ok) throw new Error('server said ' + res.status);
       const rows = await res.json();
@@ -1153,10 +1444,10 @@
   setInterval(() => { if (configured() && !document.hidden) syncNow(); }, 30000);
 
   /* ---------- boot ---------- */
-  applyTheme();
-  showDash();
-  if (configured()) syncNow();
-  else setStatus('not connected &mdash; click "set up sharing" to link with your bestie &#10084;');
+  fillAuthConfig();
+  setAuthMode('signin');
+  if (auth && auth.access_token) startApp();
+  else showAuth();
 })();
 </script>
 </body>

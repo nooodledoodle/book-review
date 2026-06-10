@@ -2110,6 +2110,41 @@
     }
   }
 
+
+  /* ============================================================
+     FIX: reading calendar + notes stay compact and aligned
+     ============================================================ */
+  .book-lower-row {
+    align-items: start !important;
+    margin-top: 14px !important;
+  }
+  .book-lower-row .reading-calendar-panel,
+  .book-lower-row .notes-frame {
+    height: auto !important;
+    min-height: 360px !important;
+  }
+  .book-lower-row .notes-frame textarea {
+    min-height: 250px !important;
+    height: 250px !important;
+    resize: vertical;
+  }
+  .book-lower-row .reading-calendar-panel {
+    justify-content: flex-start;
+  }
+  .book-lower-row .mini-calendar {
+    flex: 0 0 auto;
+  }
+  @media (max-width: 760px) {
+    .book-lower-row .reading-calendar-panel,
+    .book-lower-row .notes-frame {
+      min-height: 0 !important;
+    }
+    .book-lower-row .notes-frame textarea {
+      height: 220px !important;
+      min-height: 220px !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -2298,8 +2333,6 @@
             placeholder="little thoughts, page numbers to revisit, snacks consumed..."></textarea>
         </div>
       </div>
-    </div>
-    </div>
 
     <p class="divider-heart" id="reviewDivider">&#10086; &#10086; &#10086; &nbsp;my reading journal&nbsp; &#10086; &#10086; &#10086;</p>
 
@@ -3539,15 +3572,17 @@
   window.addEventListener('resize', syncCoverToDetailsHeight);
   function syncLowerPanelHeights() {
     if (!readingCalendarPanel || !notesFrame || !bookView || bookView.classList.contains('hidden')) return;
-    if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
-      readingCalendarPanel.style.height = '';
-      readingCalendarPanel.style.minHeight = '';
-      return;
-    }
+    readingCalendarPanel.style.height = '';
+    readingCalendarPanel.style.minHeight = '';
+    notesFrame.style.minHeight = '';
+    if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) return;
     requestAnimationFrame(() => {
-      const h = Math.max(250, Math.round(notesFrame.getBoundingClientRect().height));
-      readingCalendarPanel.style.height = h + 'px';
+      /* Keep the two boxes visually aligned, but clamp the height so a textarea or
+         previous inline style cannot make the calendar/notes stretch way down. */
+      const naturalNotesHeight = Math.round(notesFrame.getBoundingClientRect().height || 360);
+      const h = Math.max(360, Math.min(430, naturalNotesHeight));
       readingCalendarPanel.style.minHeight = h + 'px';
+      notesFrame.style.minHeight = h + 'px';
     });
   }
 

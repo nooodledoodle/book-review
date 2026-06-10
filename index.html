@@ -1900,6 +1900,129 @@
     }
   }
 
+
+
+  /* ============================================================
+     READING CALENDAR PANEL
+     clickable mini calendar for marking the days the book was read
+     ============================================================ */
+  input[type="month"] {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--serif);
+    font-size: .95rem;
+    color: var(--ink);
+    border-bottom: 1.5px dotted var(--rule);
+    padding: 2px 2px 3px;
+    outline: none;
+  }
+  .reading-calendar-panel {
+    width: 100%;
+    margin-top: 14px;
+  }
+  .calendar-month-row { margin-bottom: 12px; }
+  .calendar-weekdays,
+  .mini-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .calendar-weekdays {
+    font-family: var(--type);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    color: var(--line);
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .mini-calendar {
+    background: rgba(255,255,255,.09);
+    border: 1.5px dashed var(--line);
+    border-radius: 9px;
+    padding: 10px;
+  }
+  .calendar-day,
+  .calendar-blank {
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+  }
+  .calendar-day {
+    border: 1.5px dashed var(--rule);
+    border-radius: 7px;
+    background: var(--cream);
+    color: var(--ink-dark);
+    font-family: var(--type);
+    font-size: .78rem;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 rgba(94, 50, 50, .08);
+    transition: transform .1s ease, background .15s ease, border-color .15s ease;
+  }
+  .calendar-day:hover {
+    transform: translateY(-1px);
+    border-color: var(--line);
+    background: #fffdf7;
+  }
+  .calendar-day.read {
+    background: var(--star-on);
+    border-style: solid;
+    border-color: var(--star-on);
+    color: #fff7f0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 1px 1px 0 rgba(94, 50, 50, .12);
+  }
+  .calendar-day.read::after {
+    content: ' ♥';
+    font-size: .7em;
+  }
+  .calendar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    font-family: var(--type);
+    font-size: .74rem;
+    letter-spacing: .07em;
+    color: var(--line);
+  }
+  .calendar-clear {
+    padding: 5px 10px;
+    font-size: .68rem;
+    box-shadow: 1px 1px 0 rgba(94, 50, 50, .10);
+  }
+  .detail-rating-block,
+  .details-stars {
+    background: rgba(255,255,255,.13) !important;
+  }
+
+  @media (max-width: 760px) {
+    .reading-calendar-panel {
+      width: min(100%, 360px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  @media print {
+    .reading-calendar-panel {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .mini-calendar {
+      padding: .06in !important;
+      gap: .035in !important;
+    }
+    .calendar-day {
+      box-shadow: none !important;
+      font-size: 7pt !important;
+    }
+    .calendar-footer {
+      font-size: 7pt !important;
+      margin-top: .05in !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -2001,14 +2124,29 @@
     <div class="layout">
       <!-- LEFT COLUMN -->
       <div class="cover-column">
-        <div class="cover-box" id="coverBox" title="Click to add a cover image">
-          <span class="hint-text" id="coverHint">&#9998; click to add<br>a book cover</span>
-          <img id="coverImg" alt="" style="display:none">
+        <div class="cover-stack" id="coverStack">
+          <div class="cover-box" id="coverBox" title="Click to add a cover image">
+            <span class="hint-text" id="coverHint">&#9998; click to add<br>a book cover</span>
+            <img id="coverImg" alt="" style="display:none">
+          </div>
+          <input type="file" id="coverInput" accept="image/*" style="display:none">
+          <div class="cover-tools no-print">
+            <button class="btn cover-action" id="changeCoverBtn" type="button">Change Cover</button>
+            <button class="btn cover-action hidden" id="recropCoverBtn" type="button">Crop Cover</button>
+          </div>
         </div>
-        <input type="file" id="coverInput" accept="image/*" style="display:none">
-        <div class="cover-tools no-print">
-          <button class="btn cover-action" id="changeCoverBtn" type="button">Change Cover</button>
-          <button class="btn cover-action hidden" id="recropCoverBtn" type="button">Crop Cover</button>
+
+        <div class="frame reading-calendar-panel">
+          <span class="frame-label">Reading Calendar</span>
+          <div class="fieldrow calendar-month-row"><label>Month:</label><input type="month" id="readingMonth" data-key="reading_month"></div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+          </div>
+          <div class="mini-calendar" id="readingCalendar" aria-label="Days read calendar"></div>
+          <div class="calendar-footer">
+            <span id="readingCalendarCount">0 days marked</span>
+            <button class="btn calendar-clear no-print" id="clearCalendarMonthBtn" type="button">Clear Month</button>
+          </div>
         </div>
       </div>
 
@@ -2918,6 +3056,10 @@
   const coverTools = document.querySelector('.cover-tools');
   const bookDetailsFrame = document.getElementById('bookDetailsFrame');
   const ratingMainText = document.getElementById('ratingMainText');
+  const readingMonthInput = document.getElementById('readingMonth');
+  const readingCalendar = document.getElementById('readingCalendar');
+  const readingCalendarCount = document.getElementById('readingCalendarCount');
+  const clearCalendarMonthBtn = document.getElementById('clearCalendarMonthBtn');
   const cropOverlay = document.getElementById('cropOverlay');
   const cropPreview = document.getElementById('cropPreview');
   const cropZoom = document.getElementById('cropZoom');
@@ -3011,11 +3153,99 @@
     reviewerTwoLockNote.classList.toggle('hidden', !lockTwo);
   }
 
+
+  function monthValueFromDate(value) {
+    const v = String(value || '').trim();
+    return /^\d{4}-\d{2}/.test(v) ? v.slice(0, 7) : '';
+  }
+
+  function currentMonthValue() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function calendarMonthValue() {
+    const b = book();
+    const savedMonth = b && b.fields && b.fields.reading_month;
+    const startedMonth = b && b.fields && monthValueFromDate(b.fields.date_started);
+    return (readingMonthInput && readingMonthInput.value) || savedMonth || startedMonth || currentMonthValue();
+  }
+
+  function readDaysArray() {
+    const b = book();
+    if (!b) return [];
+    b.fields = b.fields || {};
+    if (!Array.isArray(b.fields.reading_days)) b.fields.reading_days = [];
+    return b.fields.reading_days;
+  }
+
+  function renderReadingCalendar() {
+    if (!readingCalendar || !readingMonthInput || !book()) return;
+    const month = calendarMonthValue();
+    readingMonthInput.value = month;
+    const match = /^(\d{4})-(\d{2})$/.exec(month);
+    if (!match) {
+      readingCalendar.innerHTML = '';
+      if (readingCalendarCount) readingCalendarCount.textContent = 'choose a month';
+      return;
+    }
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const firstDay = new Date(year, monthIndex, 1).getDay();
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const selected = new Set(readDaysArray());
+    const pieces = [];
+    for (let i = 0; i < firstDay; i++) pieces.push('<span class="calendar-blank" aria-hidden="true"></span>');
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateKey = month + '-' + String(day).padStart(2, '0');
+      const isRead = selected.has(dateKey);
+      pieces.push('<button class="calendar-day' + (isRead ? ' read' : '') + '" type="button" data-date="' + dateKey + '" aria-pressed="' + (isRead ? 'true' : 'false') + '">' + day + '</button>');
+    }
+    readingCalendar.innerHTML = pieces.join('');
+    const monthCount = [...selected].filter(d => d.startsWith(month + '-')).length;
+    const totalCount = selected.size;
+    if (readingCalendarCount) {
+      readingCalendarCount.textContent = totalCount === monthCount
+        ? (totalCount + (totalCount === 1 ? ' day marked' : ' days marked'))
+        : (monthCount + ' this month • ' + totalCount + ' total');
+    }
+  }
+
+  if (readingCalendar) {
+    readingCalendar.addEventListener('click', e => {
+      const btn = e.target.closest('.calendar-day');
+      if (!btn || !book()) return;
+      const days = readDaysArray();
+      const date = btn.dataset.date;
+      const idx = days.indexOf(date);
+      if (idx >= 0) days.splice(idx, 1);
+      else days.push(date);
+      days.sort();
+      book().fields.reading_days = days;
+      book().fields.reading_month = readingMonthInput.value || calendarMonthValue();
+      book().updatedAt = Date.now();
+      renderReadingCalendar();
+      autosave();
+    });
+  }
+
+  if (clearCalendarMonthBtn) {
+    clearCalendarMonthBtn.addEventListener('click', () => {
+      if (!book() || !readingMonthInput) return;
+      const month = calendarMonthValue();
+      book().fields.reading_days = readDaysArray().filter(d => !d.startsWith(month + '-'));
+      book().updatedAt = Date.now();
+      renderReadingCalendar();
+      autosave();
+    });
+  }
+
   fieldEls.forEach(el => {
     el.addEventListener('input', () => {
       if (!book() || el.disabled) return;
       book().fields[el.dataset.key] = el.value;
       book().updatedAt = Date.now();
+      if (el.dataset.key === 'reading_month' || el.dataset.key === 'date_started') renderReadingCalendar();
       autosave();
     });
   });
@@ -3125,7 +3355,9 @@
       return;
     }
     requestAnimationFrame(() => {
-      const h = Math.max(280, Math.round(bookDetailsFrame.getBoundingClientRect().height));
+      const detailsH = Math.max(320, Math.round(bookDetailsFrame.getBoundingClientRect().height));
+      const toolsH = coverTools ? Math.ceil(coverTools.getBoundingClientRect().height + 12) : 0;
+      const h = Math.max(280, detailsH - toolsH);
       const ratio = 106 / 148;
       const w = Math.round(h * ratio);
       coverBox.style.height = h + 'px';
@@ -3251,6 +3483,7 @@
     chipGroups.forEach(paintChips);
     showCover(b.cover);
     coverInput.value = '';
+    renderReadingCalendar();
     updateReviewModeUI();
     syncCoverToDetailsHeight();
   }
@@ -3278,7 +3511,7 @@
   document.getElementById('clearBtn').addEventListener('click', () => {
     if (!book()) return;
     if (!confirm('Clear everything on this page? This cannot be undone.')) return;
-    Object.assign(book(), { fields: {}, stars: {}, chips: {}, cover: null, updatedAt: Date.now() });
+    Object.assign(book(), { fields: {}, stars: {}, chips: {}, cover: null, coverSource: null, coverCrop: null, updatedAt: Date.now() });
     populate();
     saveDB();
     showToast('fresh page &#9998;');

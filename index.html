@@ -1811,6 +1811,95 @@
     }
   }
 
+
+  /* ============================================================
+     BOOK DETAILS + COVER ALIGNMENT UPDATE
+     cover height matches Book Details; shelf ratio stays intact
+     ============================================================ */
+  .layout {
+    grid-template-columns: minmax(280px, auto) minmax(0, 1fr);
+    align-items: start;
+  }
+  .cover-column {
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .cover-column .cover-box {
+    aspect-ratio: 106 / 148;
+    min-height: 0;
+    max-height: none;
+    margin: 14px auto 12px;
+  }
+  .cover-tools {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    margin: 0 auto 18px;
+  }
+  .detail-rating-block {
+    background: #fffdf7 !important;
+    border: 1.5px dashed var(--line);
+    border-radius: 9px;
+    padding: 10px 12px 12px;
+    margin: 12px 0 0;
+    box-shadow: 2px 2px 0 rgba(94, 50, 50, .07);
+  }
+  .detail-rating-block .mini-label {
+    margin-bottom: 8px;
+  }
+  .details-stars {
+    background: #fffdf7 !important;
+    border-color: var(--line);
+    margin: 0;
+    cursor: default;
+  }
+  .details-stars button {
+    pointer-events: none;
+  }
+  .avg-rating-text {
+    text-align: center;
+    font-family: var(--type);
+    font-size: .78rem;
+    letter-spacing: .08em;
+    color: var(--line);
+    margin-top: 7px;
+  }
+  .stars button {
+    color: color-mix(in srgb, var(--star-off) 20%, var(--line) 80%);
+    opacity: 1;
+  }
+  .stars button.half {
+    color: transparent;
+    background: linear-gradient(90deg, var(--star-on) 50%, color-mix(in srgb, var(--star-off) 20%, var(--line) 80%) 50%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    opacity: 1;
+  }
+
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    .cover-column .cover-box {
+      width: min(100%, 280px) !important;
+      height: auto !important;
+      aspect-ratio: 106 / 148;
+      margin-top: 0;
+    }
+    .cover-tools { width: min(100%, 280px) !important; }
+  }
+
+  @media print {
+    .cover-column .cover-box {
+      width: 2.15in !important;
+      height: 3in !important;
+      aspect-ratio: 106 / 148 !important;
+    }
+    .detail-rating-block {
+      background: #fffdf7 !important;
+      margin-top: .08in !important;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -1925,7 +2014,7 @@
 
       <!-- RIGHT COLUMN -->
       <div>
-        <div class="frame">
+        <div class="frame book-details-frame" id="bookDetailsFrame">
           <span class="frame-label">Book Details</span>
           <div class="fieldrow"><label>Title:</label><input type="text" data-key="title" placeholder="the book that took over our lives"></div>
           <div class="fieldrow"><label>Author:</label><input type="text" data-key="author"></div>
@@ -1953,11 +2042,6 @@
           <div class="fieldrow"><label>Date started:</label><input type="date" data-key="date_started"></div>
           <div class="fieldrow"><label>Date finished:</label><input type="date" data-key="date_finished"></div>
 
-          <div class="detail-rating-block">
-            <span class="mini-label">Rating:</span>
-            <div class="stars details-stars" data-stars="rating_main" aria-label="Overall rating"></div>
-          </div>
-
           <div class="details-row-grid">
             <div class="fieldrow">
               <label>Pages:</label>
@@ -1970,6 +2054,12 @@
               <label>of</label>
               <input type="text" data-key="series_total" placeholder="__">
             </div>
+          </div>
+
+          <div class="detail-rating-block">
+            <span class="mini-label">Average Rating:</span>
+            <div class="stars details-stars computed-rating" data-stars="rating_main" aria-label="Average rating"></div>
+            <div class="avg-rating-text" id="ratingMainText">not rated yet</div>
           </div>
         </div>
 
@@ -2825,6 +2915,9 @@
   const coverInput = document.getElementById('coverInput');
   const changeCoverBtn = document.getElementById('changeCoverBtn');
   const recropCoverBtn = document.getElementById('recropCoverBtn');
+  const coverTools = document.querySelector('.cover-tools');
+  const bookDetailsFrame = document.getElementById('bookDetailsFrame');
+  const ratingMainText = document.getElementById('ratingMainText');
   const cropOverlay = document.getElementById('cropOverlay');
   const cropPreview = document.getElementById('cropPreview');
   const cropZoom = document.getElementById('cropZoom');
@@ -2935,19 +3028,57 @@
       btn.textContent = '★';
       btn.setAttribute('aria-label', i + ' star' + (i > 1 ? 's' : ''));
       btn.addEventListener('click', () => {
-        if (!book() || btn.disabled || box.classList.contains('locked-field')) return;
+        if (!book() || btn.disabled || box.classList.contains('locked-field') || key === 'rating_main') return;
         book().stars[key] = (book().stars[key] === i) ? 0 : i; /* re-click clears */
         book().updatedAt = Date.now();
-        paintStars(box);
+        if (key === 'rating_me' || key === 'rating_fr') updateComputedMainRating();
+        starBoxes.forEach(paintStars);
         autosave();
       });
       box.appendChild(btn);
     }
   });
+
+  function computedMainRating() {
+    const b = book();
+    if (!b) return 0;
+    const stars = b.stars || {};
+    let vals;
+    if (shelfMode === 'shared') {
+      vals = [stars.rating_me, stars.rating_fr].map(Number).filter(v => v > 0);
+    } else {
+      vals = [stars.rating_me || stars.rating_main].map(Number).filter(v => v > 0);
+    }
+    if (!vals.length) return 0;
+    const avg = vals.reduce((sum, v) => sum + v, 0) / vals.length;
+    return Math.round(avg * 2) / 2;
+  }
+
+  function updateComputedMainRating() {
+    const b = book();
+    if (!b) return 0;
+    b.stars = b.stars || {};
+    const avg = computedMainRating();
+    b.stars.rating_main = avg;
+    if (ratingMainText) {
+      ratingMainText.textContent = avg ? (Number.isInteger(avg) ? String(avg) : avg.toFixed(1)) + ' / 5' : 'not rated yet';
+    }
+    return avg;
+  }
+
   function paintStars(box) {
     const b = book();
-    const n = (b && b.stars[box.dataset.stars]) || 0;
-    [...box.children].forEach((btn, idx) => btn.classList.toggle('on', idx < n));
+    const key = box.dataset.stars;
+    const n = key === 'rating_main' ? updateComputedMainRating() : ((b && b.stars[key]) || 0);
+    const buttons = [...box.querySelectorAll('button')];
+    buttons.forEach((btn, idx) => {
+      const starNumber = idx + 1;
+      const isFull = n >= starNumber;
+      const isHalf = !isFull && n >= (idx + 0.5);
+      btn.classList.toggle('on', isFull);
+      btn.classList.toggle('half', isHalf);
+      btn.setAttribute('aria-label', key === 'rating_main' ? ((n || 0) + ' out of 5 average rating') : btn.getAttribute('aria-label'));
+    });
   }
 
   chipGroups.forEach(group => {
@@ -2982,7 +3113,31 @@
       coverBox.classList.remove('has-cover');
       if (recropCoverBtn) recropCoverBtn.classList.add('hidden');
     }
+    syncCoverToDetailsHeight();
   };
+
+  function syncCoverToDetailsHeight() {
+    if (!coverBox || !bookDetailsFrame || !bookView || bookView.classList.contains('hidden')) return;
+    if (window.matchMedia && window.matchMedia('(max-width: 760px)').matches) {
+      coverBox.style.width = '';
+      coverBox.style.height = '';
+      if (coverTools) coverTools.style.width = '';
+      return;
+    }
+    requestAnimationFrame(() => {
+      const h = Math.max(280, Math.round(bookDetailsFrame.getBoundingClientRect().height));
+      const ratio = 106 / 148;
+      const w = Math.round(h * ratio);
+      coverBox.style.height = h + 'px';
+      coverBox.style.width = w + 'px';
+      if (coverTools) coverTools.style.width = w + 'px';
+    });
+  }
+
+  if (window.ResizeObserver && bookDetailsFrame) {
+    new ResizeObserver(syncCoverToDetailsHeight).observe(bookDetailsFrame);
+  }
+  window.addEventListener('resize', syncCoverToDetailsHeight);
 
   let cropImage = null;
   let cropSourceData = null;
@@ -3091,11 +3246,13 @@
     const b = book();
     saveCurrentReaderName();
     fieldEls.forEach(el => el.value = b.fields[el.dataset.key] || '');
+    updateComputedMainRating();
     starBoxes.forEach(paintStars);
     chipGroups.forEach(paintChips);
     showCover(b.cover);
     coverInput.value = '';
     updateReviewModeUI();
+    syncCoverToDetailsHeight();
   }
 
   function openBook(id) {
@@ -3104,6 +3261,7 @@
     dashView.classList.add('hidden');
     bookView.classList.remove('hidden');
     updateReviewModeUI();
+    syncCoverToDetailsHeight();
     window.scrollTo(0, 0);
   }
 

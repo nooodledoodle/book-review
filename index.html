@@ -81,21 +81,27 @@
 
   .app-topbar {
     display: grid;
-    grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
+    grid-template-columns: minmax(280px, 1fr) auto minmax(360px, 1fr);
     align-items: center;
-    gap: 18px;
+    gap: 12px;
     margin: 0 auto 10px;
   }
   .top-left,
   .top-right {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    flex-wrap: nowrap;
   }
   .top-left { justify-content: flex-start; }
   .top-title { text-align: center; min-width: 0; }
   .top-right { justify-content: flex-end; }
+  .top-left .btn,
+  .top-right .btn {
+    padding: 8px 14px;
+    font-size: .78rem;
+    white-space: nowrap;
+  }
 
   /* ---------- title ---------- */
   h1.masthead {
@@ -232,6 +238,36 @@
     color: var(--line);
     display: block;
     margin-top: 3px;
+  }
+
+  .shelf-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 2px 0 18px;
+  }
+  .shelf-control {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    color: var(--ink-dark);
+    background: rgba(255,255,255,.12);
+    border: 1.5px dashed var(--line);
+    padding: 7px 10px;
+  }
+  .shelf-control select {
+    width: auto;
+    min-width: 130px;
+    flex: 0 0 auto;
+    font-family: var(--type);
+    font-size: .78rem;
+    color: var(--ink);
   }
 
   /* ============================================================
@@ -738,6 +774,7 @@
     .top-left,
     .top-right {
       justify-content: center;
+      flex-wrap: wrap;
     }
   }
 
@@ -753,6 +790,7 @@
     .top-left,
     .top-right {
       justify-content: center;
+      flex-wrap: wrap;
     }
   }
 
@@ -801,8 +839,8 @@
 
   <div class="app-topbar no-print">
     <div class="top-left" id="shelfModeBar">
-      <button class="btn" id="soloShelfBtn" type="button">My Bookshelf</button>
       <button class="btn" id="sharedShelfBtn" type="button">Shared Bookshelf</button>
+      <button class="btn" id="soloShelfBtn" type="button">My Bookshelf</button>
     </div>
 
     <div class="top-title">
@@ -811,6 +849,7 @@
     </div>
 
     <div class="top-right">
+      <button class="btn" id="newBookBtn" type="button">&#10010; New Book</button>
       <div class="theme-dots" id="themeDots">
         <span>theme:</span>
         <button class="dot" data-theme="pink" title="blush pink"></button>
@@ -819,7 +858,6 @@
         <button class="dot" data-theme="beige" title="vintage beige"></button>
         <button class="dot" data-theme="orange" title="orange crush"></button>
       </div>
-      <button class="btn" id="newBookBtn" type="button">&#10010; New Book</button>
     </div>
   </div>
 
@@ -875,6 +913,22 @@
 
     <div class="frame bookcase">
       <span class="frame-label" id="bookcaseLabel">My Bookshelf</span>
+      <div class="shelf-controls no-print" id="shelfControls">
+        <label class="shelf-control">Genre:
+          <select id="genreFilter">
+            <option value="">All genres</option>
+          </select>
+        </label>
+        <label class="shelf-control">Order:
+          <select id="sortOrder">
+            <option value="recent">Recently added</option>
+            <option value="title-asc">Alphabetical A-Z</option>
+            <option value="title-desc">Alphabetical Z-A</option>
+            <option value="rating-desc">Rating high-low</option>
+            <option value="rating-asc">Rating low-high</option>
+          </select>
+        </label>
+      </div>
       <p class="empty-note" id="emptyNote">your shelf is empty... add your first book &#10084;</p>
       <div id="shelf"></div>
     </div>
@@ -1029,7 +1083,7 @@
    db.theme     = 'pink' | 'sage' | 'lavender' | 'beige' | 'orange'
    ============================================================ */
 (function () {
-  const STORAGE_PREFIX = 'bookReviewJournal.v3.';
+  const STORAGE_PREFIX = 'bookReviewJournal.v4.';
   const OLD_STORAGE_KEY = 'bookReviewJournal.v2';
   const LEGACY_KEY  = 'bookReviewJournal.v1';
   const AUTH_KEY = 'bookReviewJournal.auth';
@@ -1071,7 +1125,7 @@
   const hasSupabaseConfig = () => !!(supabaseUrl() && supabaseKey());
   const signedIn = () => !!(auth && auth.access_token && auth.user && auth.user.id);
 
-  const blankDb = () => ({ books: {}, order: [], theme: getGlobalTheme(), deleted: {} });
+  const blankDb = () => ({ books: {}, order: [], theme: getGlobalTheme(), deleted: {}, shelfMode });
   let db = blankDb();
   let currentId = null;
 
@@ -1088,29 +1142,23 @@
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()));
       if (saved && saved.books) db = Object.assign(blankDb(), saved);
-      else {
-        /* migrate the previous one-shelf version into the matching first shelf that opens it */
-        const oldScoped = JSON.parse(localStorage.getItem(oldUserStorageKey()));
-        const oldGlobal = JSON.parse(localStorage.getItem(OLD_STORAGE_KEY));
-        const old = oldScoped && oldScoped.books ? oldScoped : oldGlobal;
-        if (old && old.books) db = Object.assign(blankDb(), old);
-      }
     } catch (e) { /* start fresh */ }
 
     try {
       const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
-      if (legacy && db.order.length === 0) {
+      if (shelfMode === 'solo' && legacy && db.order.length === 0) {
         const id = 'b' + Date.now().toString(36);
         db.books[id] = {
           fields: legacy.fields || {}, stars: legacy.stars || {},
           chips: legacy.chips || {}, cover: legacy.cover || null,
-          createdAt: Date.now(), updatedAt: Date.now()
+          shelfMode: shelfMode, createdAt: Date.now(), updatedAt: Date.now()
         };
         db.order.unshift(id);
         localStorage.removeItem(LEGACY_KEY);
       }
     } catch (e) { /* ignore */ }
     db.theme = getGlobalTheme();
+    db.shelfMode = shelfMode;
   }
 
   function hasFilledValue(value) {
@@ -1135,10 +1183,17 @@
   function compactDbForStorage() {
     ensureCurrentBookSaved();
     db.theme = saveGlobalTheme(db.theme || getGlobalTheme());
-    const out = Object.assign(blankDb(), db);
+    db.shelfMode = shelfMode;
+    const out = Object.assign(blankDb(), db, { shelfMode });
     out.books = {};
-    out.order = (db.order || []).filter(id => db.books[id] && hasBookContent(db.books[id]));
-    out.order.forEach(id => { out.books[id] = db.books[id]; });
+    out.order = (db.order || []).filter(id => {
+      const b = db.books[id];
+      return b && hasBookContent(b) && (!b.shelfMode || b.shelfMode === shelfMode);
+    });
+    out.order.forEach(id => {
+      db.books[id].shelfMode = shelfMode;
+      out.books[id] = db.books[id];
+    });
     db.order = out.order;
     return out;
   }
@@ -1453,8 +1508,11 @@
     saveDB();
     currentId = null;
     shelfMode = mode;
+    if (shelfMode === 'solo') activeShelfRow = null;
     localStorage.setItem(MODE_KEY, shelfMode);
     loadDB();
+    if (genreFilter) genreFilter.value = '';
+    if (sortOrder) sortOrder.value = 'recent';
     applyTheme();
     updateShelfModeUI();
     showDash();
@@ -1487,7 +1545,7 @@
      ============================================================ */
   const statsGrid = document.getElementById('statsGrid');
   function renderStats() {
-    const books = db.order.map(id => db.books[id]).filter(Boolean);
+    const books = db.order.map(id => db.books[id]).filter(b => b && hasBookContent(b) && (!b.shelfMode || b.shelfMode === shelfMode));
     const n = books.length;
 
     const pages = books.reduce((sum, b) => {
@@ -1521,17 +1579,20 @@
       '<span class="stat-label">' + label + '</span></div>';
 
     if (shelfMode === 'solo') {
+      const soloName = titleCaseName(displayNameFromUser(auth && auth.user)) || 'my';
       statsGrid.innerHTML =
         tile(n, 'books on shelf') +
         tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
-        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'my avg rating') +
+        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', esc(soloName) + ' avg') +
         tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
     } else {
+      const ownerName = titleCaseName(readerName(activeShelfRow && activeShelfRow.owner_id, 'user 1'));
+      const friendName = titleCaseName(readerName(activeShelfRow && activeShelfRow.friend_id, 'user 2'));
       statsGrid.innerHTML =
         tile(n, 'shared books') +
         tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
-        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'user 1 avg') +
-        tile(avgFr ? avgFr + ' &#9733;' : '&#8212;', 'user 2 avg') +
+        tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', esc(ownerName) + ' avg') +
+        tile(avgFr ? avgFr + ' &#9733;' : '&#8212;', esc(friendName) + ' avg') +
         tile(agree !== null ? agree : '&#8212;', 'rating twins') +
         tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
     }
@@ -1544,8 +1605,65 @@
   const bookView = document.getElementById('bookView');
   const shelf = document.getElementById('shelf');
   const emptyNote = document.getElementById('emptyNote');
+  const genreFilter = document.getElementById('genreFilter');
+  const sortOrder = document.getElementById('sortOrder');
 
   function starStr(n) { return n ? '&#9733;'.repeat(n) : ''; }
+
+  function bookGenre(b) {
+    return String((b && b.fields && b.fields.genre) || '').trim();
+  }
+
+  function bookTitleForSort(b) {
+    return String((b && b.fields && b.fields.title) || 'untitled book').trim().toLowerCase();
+  }
+
+  function bookRatingForSort(b) {
+    const stars = (b && b.stars) || {};
+    const values = shelfMode === 'shared'
+      ? [stars.rating_me || 0, stars.rating_fr || 0].filter(v => Number(v) > 0)
+      : [stars.rating_me || stars.rating_main || 0].filter(v => Number(v) > 0);
+    return values.length ? values.reduce((a, c) => a + Number(c), 0) / values.length : 0;
+  }
+
+  function updateGenreFilterOptions() {
+    if (!genreFilter) return;
+    const current = genreFilter.value;
+    const genres = [...new Set((db.order || [])
+      .map(id => db.books[id])
+      .filter(b => b && hasBookContent(b) && (!b.shelfMode || b.shelfMode === shelfMode))
+      .map(bookGenre)
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+    genreFilter.innerHTML = '<option value="">All genres</option>' +
+      genres.map(g => '<option value="' + esc(g) + '">' + esc(g) + '</option>').join('');
+    genreFilter.value = genres.includes(current) ? current : '';
+  }
+
+  function visibleShelfIds() {
+    const selectedGenre = genreFilter ? genreFilter.value : '';
+    const selectedSort = sortOrder ? sortOrder.value : 'recent';
+    const ids = (db.order || []).filter(id => {
+      const b = db.books[id];
+      if (!b || !hasBookContent(b)) return false;
+      if (b.shelfMode && b.shelfMode !== shelfMode) return false;
+      if (selectedGenre && bookGenre(b) !== selectedGenre) return false;
+      return true;
+    });
+
+    if (selectedSort === 'title-asc' || selectedSort === 'title-desc') {
+      ids.sort((a, b) => bookTitleForSort(db.books[a]).localeCompare(bookTitleForSort(db.books[b])));
+      if (selectedSort === 'title-desc') ids.reverse();
+    } else if (selectedSort === 'rating-desc' || selectedSort === 'rating-asc') {
+      ids.sort((a, b) => {
+        const diff = bookRatingForSort(db.books[b]) - bookRatingForSort(db.books[a]);
+        if (diff !== 0) return diff;
+        return bookTitleForSort(db.books[a]).localeCompare(bookTitleForSort(db.books[b]));
+      });
+      if (selectedSort === 'rating-asc') ids.reverse();
+    }
+    return ids;
+  }
 
   function bookHtml(id) {
     const b = db.books[id];
@@ -1554,7 +1672,7 @@
     const tip = title +
       (f.author ? ' by ' + esc(f.author) : '') +
       (shelfMode === 'shared'
-        ? ' - user 1: ' + ((b.stars && b.stars.rating_me) || 0) + ', user 2: ' + ((b.stars && b.stars.rating_fr) || 0)
+        ? ' - ' + titleCaseName(readerName(activeShelfRow && activeShelfRow.owner_id, 'user 1')) + ': ' + ((b.stars && b.stars.rating_me) || 0) + ', ' + titleCaseName(readerName(activeShelfRow && activeShelfRow.friend_id, 'user 2')) + ': ' + ((b.stars && b.stars.rating_fr) || 0)
         : ' - rating: ' + ((b.stars && b.stars.rating_me) || (b.stars && b.stars.rating_main) || 0));
     const inner = b.cover
       ? '<img src="' + b.cover + '" alt="">'
@@ -1570,14 +1688,23 @@
   }
 
   function renderShelf() {
-    emptyNote.style.display = db.order.length ? 'none' : 'block';
+    updateGenreFilterOptions();
+    const allCount = (db.order || []).filter(id => db.books[id] && hasBookContent(db.books[id]) && (!db.books[id].shelfMode || db.books[id].shelfMode === shelfMode)).length;
+    const ids = visibleShelfIds();
+    if (emptyNote) {
+      emptyNote.style.display = ids.length ? 'none' : 'block';
+      if (allCount && ids.length === 0) emptyNote.innerHTML = 'no books match this filter &#10084;';
+      else emptyNote.innerHTML = shelfMode === 'solo'
+        ? 'your shelf is empty... add your first book &#10084;'
+        : 'your shared shelf is empty... add your first book together &#10084;';
+    }
 
     /* how many books fit per plank at the current width */
     const w = shelf.clientWidth || 800;
     const slot = window.innerWidth <= 760 ? 102 : 128; /* book width + gap */
     const per = Math.max(2, Math.floor(w / slot));
 
-    const items = db.order.map(bookHtml);
+    const items = ids.map(bookHtml);
 
     const rows = [];
     for (let i = 0; i < items.length; i += per) rows.push(items.slice(i, i + per));
@@ -1586,6 +1713,9 @@
     shelf.innerHTML = rows.map(r => '<div class="shelf-row">' + r.join('') + '</div>').join('');
     renderStats();
   }
+
+  if (genreFilter) genreFilter.addEventListener('change', renderShelf);
+  if (sortOrder) sortOrder.addEventListener('change', renderShelf);
 
   let resizeTimer;
   window.addEventListener('resize', () => {
@@ -1618,7 +1748,7 @@
 
   function newBook() {
     const id = 'b' + Date.now().toString(36);
-    db.books[id] = { fields: {}, stars: {}, chips: {}, cover: null, createdAt: Date.now(), updatedAt: Date.now() };
+    db.books[id] = { fields: {}, stars: {}, chips: {}, cover: null, shelfMode: shelfMode, createdAt: Date.now(), updatedAt: Date.now() };
     openBook(id);
   }
 
@@ -2112,6 +2242,8 @@
     });
     Object.keys(remote.books).forEach(id => {
       const rb = remote.books[id];
+      if (rb.shelfMode && rb.shelfMode !== 'shared') return;
+      rb.shelfMode = 'shared';
       const lb = db.books[id];
       if (!lb || (rb.updatedAt || 0) > (lb.updatedAt || 0)) db.books[id] = rb;
     });
@@ -2122,10 +2254,12 @@
     const seen = {};
     const order = [];
     db.order.concat(remote.order || []).forEach(id => {
-      if (db.books[id] && !seen[id]) { seen[id] = true; order.push(id); }
+      const b = db.books[id];
+      if (b && (!b.shelfMode || b.shelfMode === 'shared') && !seen[id]) { seen[id] = true; order.push(id); }
     });
     Object.keys(db.books).forEach(id => {
-      if (!seen[id]) { seen[id] = true; order.push(id); }
+      const b = db.books[id];
+      if (b && (!b.shelfMode || b.shelfMode === 'shared') && !seen[id]) { seen[id] = true; order.push(id); }
     });
     db.order = order;
     db.theme = getGlobalTheme();

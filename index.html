@@ -11,6 +11,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Book Review Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
      PINK VINTAGE BOOK JOURNAL
@@ -893,6 +896,215 @@
     .frame, .stars { break-inside: avoid; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     textarea { resize: none; }
+  }
+
+  /* ============================================================
+     AESTHETIC POLISH LAYER
+     pure visual upgrades - no logic, safe to tweak or delete
+     ============================================================ */
+
+  :root {
+    --type: 'Special Elite', 'Courier New', Courier, monospace;
+    --serif: 'Lora', Georgia, 'Times New Roman', serif;
+    --shadow-ink: rgba(94, 50, 50, .16);
+  }
+
+  /* softer page: gentle light falling from the top */
+  body {
+    background-image:
+      radial-gradient(1100px 420px at 50% -60px, rgba(255,255,255,.34), transparent 70%),
+      radial-gradient(rgba(94,50,50,.05) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.2px),
+      linear-gradient(var(--bg), var(--bg));
+    background-size: 100% 100%, 5px 5px, 9px 9px, 100% 100%;
+  }
+
+  ::selection { background: var(--blush); color: var(--ink-dark); }
+
+  /* cute scrollbar */
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--rule);
+    border-radius: 999px;
+    border: 3px solid var(--bg);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line); }
+
+  /* letterpress masthead */
+  h1.masthead { text-shadow: 2px 2px 0 rgba(255, 255, 255, .4); }
+  .masthead-sub { letter-spacing: .3em; }
+
+  /* sticker-style buttons */
+  .btn {
+    border-radius: 7px;
+    box-shadow: 2px 2px 0 var(--shadow-ink);
+  }
+  .btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--shadow-ink);
+  }
+  .btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--shadow-ink);
+  }
+  .btn.active { box-shadow: 1px 1px 0 var(--shadow-ink), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn:focus-visible, .chip:focus-visible, .dot:focus-visible {
+    outline: 2px dashed var(--line);
+    outline-offset: 2px;
+  }
+
+  /* paper frames: rounded, lifted, with a strip of washi tape */
+  .frame {
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .13);
+    box-shadow: 4px 5px 0 rgba(94, 50, 50, .07);
+    padding-top: 22px;
+  }
+  .frame::after {
+    content: '';
+    position: absolute;
+    top: -11px;
+    right: 28px;
+    width: 76px;
+    height: 22px;
+    background: var(--blush);
+    opacity: .5;
+    transform: rotate(3deg);
+    border-left: 1.5px dashed rgba(255, 255, 255, .85);
+    border-right: 1.5px dashed rgba(255, 255, 255, .85);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(94, 50, 50, .12);
+    pointer-events: none;
+  }
+  /* the bookcase keeps its corner free of tape so the shelf reads clean */
+  .bookcase::after { display: none; }
+  .frame > .frame-label {
+    letter-spacing: .16em;
+    border-radius: 999px;
+  }
+
+  /* worksheet rows: a touch rounder and creamier */
+  .fieldrow {
+    border-radius: 6px;
+    box-shadow: 2px 2px 0 rgba(94, 50, 50, .07);
+  }
+  .cover-box { border-radius: 6px; }
+
+  /* stat tiles: scrapbook tilt + bigger numbers */
+  .stat-tile {
+    border-radius: 8px;
+    padding: 15px 8px 12px;
+    box-shadow: 2px 3px 0 rgba(94, 50, 50, .08);
+    transition: transform .12s ease;
+  }
+  .stat-tile:nth-child(odd)  { transform: rotate(-.5deg); }
+  .stat-tile:nth-child(even) { transform: rotate(.5deg); }
+  .stat-tile:hover { transform: rotate(0) translateY(-2px); }
+  .stat-num { font-size: 1.65rem; }
+  .stat-label::before { content: '\2766\00a0'; color: var(--rule); }
+
+  /* bookshelf: warm interior + cozier empty state */
+  .bookcase {
+    background:
+      linear-gradient(rgba(255, 255, 255, .16), rgba(255, 255, 255, .02)),
+      rgba(255, 255, 255, .06);
+  }
+  .shelf-row { min-height: 152px; margin-bottom: 38px; }
+  .shelf-row::after {
+    border-radius: 3px;
+    box-shadow: 0 5px 6px rgba(60, 30, 30, .25), inset 0 1.5px 0 rgba(255, 255, 255, .35), inset 0 -2px 0 rgba(60, 30, 30, .18);
+  }
+  .empty-note {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: .95rem;
+    letter-spacing: .04em;
+    margin: 10px 0 18px;
+  }
+  .empty-note::before { content: '\275B '; color: var(--rule); }
+  .empty-note::after  { content: ' \275C'; color: var(--rule); }
+
+  .add-book { border-radius: 4px 7px 7px 4px; }
+  .add-book .plus { transition: transform .15s ease; }
+  .add-book:hover .plus { transform: scale(1.2) rotate(90deg); }
+
+  .shelf-book { transition: transform .15s ease, filter .15s ease; }
+  .shelf-book:hover { filter: drop-shadow(4px 7px 5px rgba(60, 30, 30, .3)); }
+  .shelf-book:nth-child(even):hover { transform: translateY(-8px) rotate(1.2deg); }
+
+  /* shelf filter controls: little cream tags */
+  .shelf-control {
+    background: var(--cream);
+    border-radius: 999px;
+    padding: 7px 14px;
+    box-shadow: 2px 2px 0 rgba(94, 50, 50, .08);
+  }
+  .shelf-control select { border-bottom: none; }
+
+  /* header: settle the top bar onto its own gentle baseline */
+  .app-topbar { margin-bottom: 6px; }
+  .mode-helper { margin: -8px 0 12px; font-style: italic; }
+  .userbar {
+    margin: 0 auto 24px;
+    padding-bottom: 18px;
+    border-bottom: 1.5px dashed var(--rule);
+    max-width: 560px;
+  }
+  #userLabel {
+    background: rgba(255, 255, 255, .35);
+    border: 1.5px dashed var(--line);
+    border-radius: 999px;
+    padding: 5px 14px;
+    color: var(--ink-dark);
+  }
+  #userLabel::before { content: '\2766 '; color: var(--star-on); }
+
+  /* theme dots: jewelry-box feel */
+  .dot { box-shadow: 0 2px 3px rgba(0, 0, 0, .22), inset 0 -3px 5px rgba(0, 0, 0, .12), inset 0 2px 3px rgba(255, 255, 255, .55); }
+
+  /* auth card: a proper title page */
+  .auth-card {
+    border-radius: 10px;
+    position: relative;
+    background: rgba(255, 255, 255, .16);
+  }
+  .auth-card::before {
+    content: '';
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+    width: 110px;
+    height: 24px;
+    background: var(--blush);
+    opacity: .55;
+    border-left: 1.5px dashed rgba(255, 255, 255, .85);
+    border-right: 1.5px dashed rgba(255, 255, 255, .85);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .auth-card h1 { text-shadow: 2px 2px 0 rgba(255, 255, 255, .4); }
+  .auth-tab { border-radius: 7px; box-shadow: 2px 2px 0 var(--shadow-ink); }
+  .auth-tab.active { box-shadow: 1px 1px 0 var(--shadow-ink); }
+
+  /* invite cards + chips */
+  .invite-panel { border-radius: 8px; }
+  .invite-card { border-radius: 6px; }
+  .chip { box-shadow: 1.5px 1.5px 0 rgba(94, 50, 50, .1); }
+  .chip.on { box-shadow: 1px 1px 0 rgba(94, 50, 50, .18); }
+
+  /* stars sparkle a little */
+  .stars { border-radius: 9px; }
+  .stars button.on { text-shadow: 0 0 6px rgba(201, 99, 127, .35), 0 1px 0 rgba(60, 30, 30, .18); }
+
+  /* toast: candy pill */
+  .toast { box-shadow: 0 4px 14px rgba(60, 30, 30, .35); }
+
+  /* print stays clean: no tape, no tilt */
+  @media print {
+    .frame::after, .auth-card::before { display: none !important; }
+    .stat-tile { transform: none; }
   }
 </style>
 </head>

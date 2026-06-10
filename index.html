@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Book Review Journal",
+  "schemaVersion": 1,
+  "description": "Pink vintage-journal book review template two friends can fill out together; saves entries in localStorage, printable."
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Review Journal</title>
+<style>
+  /* ============================================================
+     PINK VINTAGE BOOK JOURNAL
+     bookshelf dashboard + individual book pages + themes + stats
+     ============================================================ */
+  :root {
+    color-scheme: light;
+    --bg:         #f2d9d9;   /* soft dusty pink page background   */
+    --bg-deep:    #e9c6c6;   /* slightly deeper pink panels       */
+    --blush:      #e3b6b6;   /* blush fill                        */
+    --cream:      #fdf6ec;   /* cream input boxes                 */
+    --ink:        #7a4444;   /* rose-brown body text              */
+    --ink-dark:   #5e3232;   /* headings / strong text            */
+    --line:       #a06464;   /* dashed border color               */
+    --rule:       #d8a8a8;   /* notebook ruling lines             */
+    --star-on:    #c9637f;   /* filled star                       */
+    --star-off:   #ecd2d2;   /* empty star                        */
+    --plank:      #a96f63;   /* bookshelf wood                    */
+    --plank-light:#c08d7d;
+    --type: 'Courier New', Courier, monospace;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+
+  /* ---------- alternative themes (set via JS on <html>) ---------- */
+  html[data-theme="sage"] {
+    --bg: #dfe7d6; --bg-deep: #cfdcc1; --blush: #c8d6ba; --cream: #fbf8ec;
+    --ink: #50603f; --ink-dark: #3d4b30; --line: #71855c; --rule: #b6c6a4;
+    --star-on: #7d9a58; --star-off: #dfe9d2;
+    --plank: #8a9070; --plank-light: #a7ad8c;
+  }
+  html[data-theme="lavender"] {
+    --bg: #e5deef; --bg-deep: #d6cbe7; --blush: #cbbee1; --cream: #fdf9f0;
+    --ink: #5c4b76; --ink-dark: #483a5c; --line: #7e6c9c; --rule: #c2b3da;
+    --star-on: #8f6fba; --star-off: #e6def1;
+    --plank: #8a7599; --plank-light: #a995b8;
+  }
+  html[data-theme="beige"] {
+    --bg: #ddcdb4; --bg-deep: #d0bd9e; --blush: #c6b295; --cream: #f5edd8;
+    --ink: #5e4a32; --ink-dark: #4a3a26; --line: #7a6347; --rule: #c2ab8a;
+    --star-on: #a0784a; --star-off: #e6d9c2;
+    --plank: #8a6a48; --plank-light: #a98a64;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 28px 16px 60px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    /* subtle CSS-only paper grain */
+    background-image:
+      radial-gradient(rgba(94,50,50,.05) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.2px),
+      linear-gradient(var(--bg), var(--bg));
+    background-size: 5px 5px, 9px 9px, 100% 100%;
+    transition: background-color .3s ease;
+  }
+
+  .page { max-width: 980px; margin: 0 auto; }
+
+  /* ---------- title ---------- */
+  h1.masthead {
+    font-family: var(--type);
+    font-weight: 700;
+    text-align: center;
+    color: var(--ink-dark);
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    letter-spacing: .45em;
+    text-indent: .45em;
+    margin: 4px 0 2px;
+  }
+  .masthead-sub {
+    text-align: center;
+    font-family: var(--type);
+    font-size: .85rem;
+    letter-spacing: .25em;
+    color: var(--line);
+    margin: 0 0 14px;
+  }
+
+  /* ---------- theme picker ---------- */
+  .theme-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 22px;
+    font-family: var(--type);
+    font-size: .75rem;
+    letter-spacing: .15em;
+    color: var(--line);
+  }
+  .dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    cursor: pointer;
+    padding: 0;
+    transition: transform .1s ease;
+  }
+  .dot:hover { transform: scale(1.15); }
+  .dot.active { outline: 2.5px dashed var(--line); outline-offset: 2px; }
+  .dot[data-theme="pink"]     { background: #e9b9c4; }
+  .dot[data-theme="sage"]     { background: #aebf95; }
+  .dot[data-theme="lavender"] { background: #b9a5d6; }
+  .dot[data-theme="beige"]    { background: #c9b08a; }
+
+  /* ---------- buttons ---------- */
+  .toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+  .btn {
+    font-family: var(--type);
+    font-size: .85rem;
+    letter-spacing: .08em;
+    color: var(--ink-dark);
+    background: var(--cream);
+    border: 2px dashed var(--line);
+    border-radius: 4px;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: transform .08s ease, background .15s ease;
+  }
+  .btn:hover { background: #fffdf7; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.danger:hover { background: #fbe9e9; }
+
+  /* ============================================================
+     READING STATS
+     ============================================================ */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  .stat-tile {
+    background: var(--cream);
+    border: 1.5px dashed var(--line);
+    text-align: center;
+    padding: 12px 8px 10px;
+  }
+  .stat-num {
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: 1.45rem;
+    color: var(--ink-dark);
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  .stat-label {
+    font-family: var(--type);
+    font-size: .68rem;
+    letter-spacing: .12em;
+    color: var(--line);
+    display: block;
+    margin-top: 3px;
+  }
+
+  /* ============================================================
+     BOOKSHELF DASHBOARD
+     books standing on wooden planks
+     ============================================================ */
+  .bookcase {
+    border: 2.5px dashed var(--line);
+    border-radius: 3px;
+    padding: 26px 18px 6px;
+    background: rgba(255,255,255,.07);
+    position: relative;
+    margin: 14px 0 22px;
+  }
+  .shelf-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 22px;
+    min-height: 168px;
+    position: relative;
+    margin-bottom: 32px;
+    padding: 0 6px;
+  }
+  /* the wooden plank */
+  .shelf-row::after {
+    content: '';
+    position: absolute;
+    left: -8px;
+    right: -8px;
+    bottom: -15px;
+    height: 15px;
+    background: linear-gradient(var(--plank-light), var(--plank));
+    border-radius: 2px;
+    box-shadow: 0 4px 5px rgba(60,30,30,.28), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+
+  .shelf-book {
+    position: relative;
+    width: 106px;
+    height: 148px;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: transform .12s ease;
+    filter: drop-shadow(3px 4px 3px rgba(60,30,30,.25));
+  }
+  .shelf-book:hover { transform: translateY(-8px) rotate(-1.2deg); }
+  .shelf-book img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px 4px 4px 2px;
+    display: block;
+  }
+  /* generated "front cover" when no image was added */
+  .book-front {
+    width: 100%;
+    height: 100%;
+    background: var(--blush);
+    border-radius: 2px 4px 4px 2px;
+    border-left: 7px solid var(--line);   /* spine */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 7px 8px 12px;
+    text-align: center;
+  }
+  .book-front .bf-title {
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: .68rem;
+    line-height: 1.45;
+    color: var(--ink-dark);
+    max-height: 5.9em;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  .book-front .bf-stars { font-size: .62rem; color: var(--star-on); letter-spacing: .1em; }
+  .book-front .bf-deco { font-size: .6rem; color: var(--line); letter-spacing: .25em; }
+
+  .shelf-book .del {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    border: none;
+    background: var(--cream);
+    color: var(--line);
+    font-family: var(--type);
+    font-size: .72rem;
+    border-radius: 999px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity .15s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  .shelf-book:hover .del { opacity: 1; }
+  .shelf-book .del:hover { color: #b03a3a; background: #fbe9e9; }
+
+  /* the "add a book" slot */
+  .add-book {
+    width: 106px;
+    height: 148px;
+    flex: 0 0 auto;
+    border: 2.5px dashed var(--line);
+    border-radius: 2px 4px 4px 2px;
+    background: rgba(255,255,255,.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: var(--type);
+    font-size: .68rem;
+    color: var(--line);
+    text-align: center;
+    transition: background .15s ease, transform .12s ease;
+  }
+  .add-book:hover { background: rgba(255,255,255,.4); transform: translateY(-4px); }
+  .add-book .plus { font-size: 1.7rem; line-height: 1; }
+
+  .empty-note {
+    text-align: center;
+    font-family: var(--type);
+    font-size: .82rem;
+    color: var(--line);
+    letter-spacing: .1em;
+    margin: 0 0 14px;
+  }
+
+  .sync-status, .sync-hint {
+    font-family: var(--type);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    color: var(--line);
+    margin: 2px 0 12px;
+    text-align: center;
+  }
+  .sync-hint { margin: 4px 0 6px; font-style: italic; }
+
+  /* ============================================================
+     BOOK PAGE
+     ============================================================ */
+  .frame {
+    border: 2.5px dashed var(--line);
+    border-radius: 3px;
+    padding: 18px 16px 16px;
+    position: relative;
+    margin: 14px 0 22px;
+    background: rgba(255,255,255,.07);
+  }
+  .frame > .frame-label {
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: .12em;
+    color: var(--ink-dark);
+    background: var(--bg);
+    display: inline-block;
+    position: absolute;
+    top: -0.85em;
+    left: 14px;
+    padding: 0 10px;
+  }
+
+  .fieldrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--cream);
+    border: 1px solid rgba(120,80,80,.25);
+    box-shadow: 1px 2px 0 rgba(60,30,30,.08);
+    padding: 9px 12px;
+    margin-bottom: 10px;
+  }
+  .fieldrow label {
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--ink-dark);
+    white-space: nowrap;
+  }
+  input[type="text"], input[type="date"], select {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--serif);
+    font-size: .95rem;
+    color: var(--ink);
+    border-bottom: 1.5px dotted var(--rule);
+    padding: 2px 2px 3px;
+    outline: none;
+  }
+  select { cursor: pointer; }
+  input::placeholder, textarea::placeholder { color: var(--rule); font-style: italic; }
+  input:focus, textarea:focus, select:focus { border-color: var(--line); }
+
+  textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: vertical;
+    font-family: var(--serif);
+    font-size: .95rem;
+    color: var(--ink);
+    outline: none;
+    line-height: 28px;
+  }
+  .lined {
+    background-image: repeating-linear-gradient(
+      transparent, transparent 27px, var(--rule) 27px, var(--rule) 28px);
+    background-attachment: local;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 0.9fr 1.4fr;
+    gap: 22px;
+    align-items: start;
+  }
+
+  .cover-box {
+    background: var(--cream);
+    border: 1px solid rgba(120,80,80,.25);
+    box-shadow: 2px 3px 0 rgba(60,30,30,.10);
+    aspect-ratio: 3 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .cover-box .hint-text {
+    font-family: var(--type);
+    font-size: .8rem;
+    color: var(--rule);
+    padding: 12px;
+    line-height: 1.6;
+  }
+  .cover-box img { width: 100%; height: 100%; object-fit: cover; }
+
+  .stars {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    border: 2.5px dashed var(--line);
+    padding: 10px 8px;
+    margin-bottom: 14px;
+    background: rgba(255,255,255,.07);
+  }
+  .stars button {
+    border: none;
+    background: none;
+    font-size: 1.7rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--star-off);
+    padding: 2px;
+    transition: transform .1s ease, color .12s ease;
+  }
+  .stars button:hover { transform: scale(1.18) rotate(-6deg); }
+  .stars button.on { color: var(--star-on); text-shadow: 0 1px 0 rgba(60,30,30,.18); }
+  .stars.mini { border-width: 2px; padding: 6px; margin-bottom: 10px; }
+  .stars.mini button { font-size: 1.3rem; }
+
+  .book-of { display: flex; align-items: center; gap: 8px; }
+  .book-of input { flex: 0 0 44px; text-align: center; font-family: var(--type); }
+
+  .reviewers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-bottom: 22px;
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--type);
+    font-size: .78rem;
+    border: 1.5px dashed var(--line);
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: background .12s ease;
+  }
+  .chip:hover { background: #fffdf7; }
+  .chip.on { background: var(--star-on); border-style: solid; color: #fff7f0; }
+  .chip-row { margin-bottom: 10px; }
+  .chip-row .chip-label, .mini-label {
+    font-family: var(--type);
+    font-weight: 700;
+    font-size: .85rem;
+    color: var(--ink-dark);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .divider-heart {
+    text-align: center;
+    font-family: var(--type);
+    letter-spacing: .3em;
+    color: var(--line);
+    margin: 6px 0 26px;
+    font-size: .9rem;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink-dark);
+    color: #fdf0ea;
+    font-family: var(--type);
+    font-size: .85rem;
+    letter-spacing: .08em;
+    padding: 10px 22px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 760px) {
+    .layout, .reviewers { grid-template-columns: 1fr; }
+    .cover-box { max-width: 280px; margin-left: auto; margin-right: auto; }
+    .stars { max-width: 320px; margin-left: auto; margin-right: auto; }
+    .shelf-row { gap: 14px; min-height: 140px; }
+    .shelf-book, .add-book { width: 88px; height: 124px; }
+  }
+
+  @media print {
+    body { padding: 0; }
+    .toolbar, .toast, .no-print, .theme-dots, #dashView { display: none !important; }
+    #bookView { display: block !important; }
+    .frame, .stars { break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    textarea { resize: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1 class="masthead">BOOK&nbsp;REVIEW</h1>
+  <p class="masthead-sub">— a shared reading journal —</p>
+
+  <div class="theme-dots no-print" id="themeDots">
+    <span>theme:</span>
+    <button class="dot" data-theme="pink" title="blush pink"></button>
+    <button class="dot" data-theme="sage" title="sage garden"></button>
+    <button class="dot" data-theme="lavender" title="lavender dusk"></button>
+    <button class="dot" data-theme="beige" title="vintage beige"></button>
+  </div>
+
+  <!-- ================= DASHBOARD ================= -->
+  <div id="dashView">
+    <div class="toolbar">
+      <button class="btn" id="newBookBtn">&#10010; New Book</button>
+    </div>
+
+    <div class="frame">
+      <span class="frame-label">Reading Stats</span>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div class="frame no-print">
+      <span class="frame-label">Shared Shelf</span>
+      <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
+      <div class="toolbar" style="margin-bottom:10px">
+        <button class="btn" id="syncNowBtn">&#8635; Sync Now</button>
+        <button class="btn" id="syncSetupBtn">&#9881; Set Up Sharing</button>
+      </div>
+      <div id="syncSetup" class="hidden">
+        <div class="fieldrow"><label>Supabase URL:</label><input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co"></div>
+        <div class="fieldrow"><label>Anon key:</label><input type="text" id="cfgKey" placeholder="paste the long anon public key"></div>
+        <div class="fieldrow"><label>Shelf code:</label><input type="text" id="cfgCode" placeholder="a secret you both share, e.g. meows-bestie-7741"></div>
+        <div class="toolbar" style="margin-bottom:4px">
+          <button class="btn" id="cfgSaveBtn">&#10084; Save &amp; Connect</button>
+        </div>
+        <p class="sync-hint">one-time setup &mdash; see SETUP-shared-shelf.md in your folder for the 5-minute guide</p>
+      </div>
+    </div>
+
+    <div class="frame bookcase">
+      <span class="frame-label">Our Bookshelf</span>
+      <p class="empty-note" id="emptyNote">your shelf is empty... add your first book together &#10084;</p>
+      <div id="shelf"></div>
+    </div>
+  </div>
+
+  <!-- ================= BOOK PAGE ================= -->
+  <div id="bookView" class="hidden">
+    <div class="toolbar">
+      <button class="btn" id="backBtn">&#8592; Back to Shelf</button>
+      <button class="btn" id="saveBtn">&#10084; Save Review</button>
+      <button class="btn danger" id="clearBtn">&#10006; Clear Page</button>
+      <button class="btn" id="printBtn">&#9113; Print / Save as PDF</button>
+    </div>
+
+    <div class="layout">
+      <!-- LEFT COLUMN -->
+      <div>
+        <div class="cover-box" id="coverBox" title="Click to add a cover image">
+          <span class="hint-text" id="coverHint">&#9998; click to add<br>a book cover</span>
+          <img id="coverImg" alt="" style="display:none">
+        </div>
+        <input type="file" id="coverInput" accept="image/*" style="display:none">
+
+        <div class="stars" data-stars="rating_main" aria-label="Overall rating"></div>
+
+        <div class="fieldrow">
+          <label>Pages:</label>
+          <input type="text" data-key="pages" placeholder="e.g. 384">
+        </div>
+
+        <div class="fieldrow book-of">
+          <label>Book</label>
+          <input type="text" data-key="series_num" placeholder="__">
+          <label>of</label>
+          <input type="text" data-key="series_total" placeholder="__">
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div>
+        <div class="frame">
+          <span class="frame-label">Book Details</span>
+          <div class="fieldrow"><label>Title:</label><input type="text" data-key="title" placeholder="the book that took over our lives"></div>
+          <div class="fieldrow"><label>Author:</label><input type="text" data-key="author"></div>
+          <div class="fieldrow"><label>Genre:</label>
+            <select data-key="genre">
+              <option value="">choose a genre...</option>
+              <option>Fantasy</option>
+              <option>Romance</option>
+              <option>Romantasy</option>
+              <option>Sci-Fi</option>
+              <option>Mystery</option>
+              <option>Thriller</option>
+              <option>Horror</option>
+              <option>Historical Fiction</option>
+              <option>Literary Fiction</option>
+              <option>Contemporary</option>
+              <option>Young Adult</option>
+              <option>Classic</option>
+              <option>Non-Fiction</option>
+              <option>Memoir</option>
+              <option>Poetry</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="fieldrow"><label>Date started:</label><input type="date" data-key="date_started"></div>
+          <div class="fieldrow"><label>Date finished:</label><input type="date" data-key="date_finished"></div>
+        </div>
+
+        <div class="frame">
+          <span class="frame-label">Notes</span>
+          <textarea class="lined" rows="8" data-key="notes"
+            placeholder="little thoughts, page numbers to revisit, snacks consumed..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <p class="divider-heart">&#10086; &#10086; &#10086; &nbsp;read together, reviewed together&nbsp; &#10086; &#10086; &#10086;</p>
+
+    <div class="reviewers">
+      <div class="frame">
+        <span class="frame-label">My Review</span>
+        <div class="fieldrow"><label>Name:</label><input type="text" data-key="me_name" placeholder="you!"></div>
+        <div class="stars mini" data-stars="rating_me" aria-label="My rating"></div>
+        <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="me_quote"></div>
+        <span class="mini-label">Main thoughts:</span>
+        <textarea class="lined" rows="5" data-key="me_thoughts" placeholder="spill everything..."></textarea>
+        <div class="chip-row">
+          <span class="chip-label">Did you like the ending?</span>
+          <div class="chips" data-chips="me_ending">
+            <button class="chip" data-value="loved it">&#10084; loved it</button>
+            <button class="chip" data-value="mixed feelings">~ mixed feelings</button>
+            <button class="chip" data-value="no, it broke me">&#10007; it broke me</button>
+          </div>
+        </div>
+        <div class="chip-row">
+          <span class="chip-label">Would you recommend it?</span>
+          <div class="chips" data-chips="me_recommend">
+            <button class="chip" data-value="yes!!">yes!!</button>
+            <button class="chip" data-value="maybe">maybe</button>
+            <button class="chip" data-value="no">no</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <span class="frame-label">Friend's Review</span>
+        <div class="fieldrow"><label>Name:</label><input type="text" data-key="fr_name" placeholder="your reading bestie"></div>
+        <div class="stars mini" data-stars="rating_fr" aria-label="Friend's rating"></div>
+        <div class="fieldrow"><label>Fave quote:</label><input type="text" data-key="fr_quote"></div>
+        <span class="mini-label">Main thoughts:</span>
+        <textarea class="lined" rows="5" data-key="fr_thoughts" placeholder="spill everything..."></textarea>
+        <div class="chip-row">
+          <span class="chip-label">Did you like the ending?</span>
+          <div class="chips" data-chips="fr_ending">
+            <button class="chip" data-value="loved it">&#10084; loved it</button>
+            <button class="chip" data-value="mixed feelings">~ mixed feelings</button>
+            <button class="chip" data-value="no, it broke me">&#10007; it broke me</button>
+          </div>
+        </div>
+        <div class="chip-row">
+          <span class="chip-label">Would you recommend it?</span>
+          <div class="chips" data-chips="fr_recommend">
+            <button class="chip" data-value="yes!!">yes!!</button>
+            <button class="chip" data-value="maybe">maybe</button>
+            <button class="chip" data-value="no">no</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <span class="frame-label">Our Final Thoughts</span>
+      <div class="fieldrow"><label>We agreed on:</label>
+        <input type="text" data-key="agreed" placeholder="the things we both yelled about"></div>
+      <div class="fieldrow"><label>We disagreed on:</label>
+        <input type="text" data-key="disagreed" placeholder="agree to disagree..."></div>
+      <span class="mini-label" style="margin:8px 0 4px">Questions we want to discuss:</span>
+      <textarea class="lined" rows="4" data-key="questions" placeholder="for our next book chat..."></textarea>
+      <div class="fieldrow" style="margin-top:10px"><label>Final shared verdict:</label>
+        <input type="text" data-key="verdict" placeholder="one line to sum it all up"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">saved &#10084;</div>
+
+<script>
+/* ============================================================
+   APP STATE
+   db.books[id] = { fields, stars, chips, cover, createdAt }
+   db.order     = [ids, newest first]
+   db.theme     = 'pink' | 'sage' | 'lavender' | 'beige'
+   ============================================================ */
+(function () {
+  const STORAGE_KEY = 'bookReviewJournal.v2';
+  const LEGACY_KEY  = 'bookReviewJournal.v1';
+
+  let db = { books: {}, order: [], theme: 'pink' };
+  let currentId = null;
+
+  /* ---------- load (with migration from the single-book v1) ---------- */
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && saved.books) db = Object.assign({ theme: 'pink' }, saved);
+  } catch (e) { /* start fresh */ }
+  try {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+    if (legacy && db.order.length === 0) {
+      const id = 'b' + Date.now().toString(36);
+      db.books[id] = {
+        fields: legacy.fields || {}, stars: legacy.stars || {},
+        chips: legacy.chips || {}, cover: legacy.cover || null,
+        createdAt: Date.now()
+      };
+      db.order.unshift(id);
+      localStorage.removeItem(LEGACY_KEY);
+    }
+  } catch (e) { /* ignore */ }
+
+  const saveDB = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  let saveTimer;
+  const autosave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveDB, 400); scheduleSync(); };
+  const book = () => db.books[currentId];
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ============================================================
+     THEME PICKER - sets data-theme on <html>
+     ============================================================ */
+  const themeDots = document.getElementById('themeDots');
+  function applyTheme() {
+    const t = db.theme || 'pink';
+    document.documentElement.setAttribute('data-theme', t);
+    [...themeDots.querySelectorAll('.dot')].forEach(d =>
+      d.classList.toggle('active', d.dataset.theme === t));
+  }
+  themeDots.addEventListener('click', e => {
+    const dot = e.target.closest('.dot');
+    if (!dot) return;
+    db.theme = dot.dataset.theme;
+    applyTheme();
+    saveDB();
+  });
+
+  /* ============================================================
+     READING STATS
+     ============================================================ */
+  const statsGrid = document.getElementById('statsGrid');
+  function renderStats() {
+    const books = db.order.map(id => db.books[id]).filter(Boolean);
+    const n = books.length;
+
+    const pages = books.reduce((sum, b) => {
+      const p = parseInt(b.fields && b.fields.pages, 10);
+      return sum + (isNaN(p) ? 0 : p);
+    }, 0);
+
+    const avg = key => {
+      const vals = books.map(b => (b.stars && b.stars[key]) || 0).filter(v => v > 0);
+      return vals.length ? (vals.reduce((a, c) => a + c, 0) / vals.length).toFixed(1) : null;
+    };
+    const avgMe = avg('rating_me');
+    const avgFr = avg('rating_fr');
+
+    /* agreement: of the books you BOTH rated, how often the stars match */
+    const bothRated = books.filter(b =>
+      b.stars && (b.stars.rating_me || 0) > 0 && (b.stars.rating_fr || 0) > 0);
+    const same = bothRated.filter(b => b.stars.rating_me === b.stars.rating_fr).length;
+    const agree = bothRated.length ? Math.round(100 * same / bothRated.length) + '%' : null;
+
+    /* most-read genre */
+    const counts = {};
+    books.forEach(b => {
+      const g = b.fields && b.fields.genre;
+      if (g) counts[g] = (counts[g] || 0) + 1;
+    });
+    const topGenre = Object.keys(counts).sort((a, b2) => counts[b2] - counts[a])[0] || null;
+
+    const tile = (num, label) =>
+      '<div class="stat-tile"><span class="stat-num">' + num + '</span>' +
+      '<span class="stat-label">' + label + '</span></div>';
+
+    statsGrid.innerHTML =
+      tile(n, 'books on shelf') +
+      tile(pages ? pages.toLocaleString() : '&#8212;', 'pages read') +
+      tile(avgMe ? avgMe + ' &#9733;' : '&#8212;', 'my avg rating') +
+      tile(avgFr ? avgFr + ' &#9733;' : '&#8212;', "bestie's avg") +
+      tile(agree !== null ? agree : '&#8212;', 'rating twins') +
+      tile(topGenre ? esc(topGenre) : '&#8212;', 'top genre');
+  }
+
+  /* ============================================================
+     BOOKSHELF - books are chunked into rows on wooden planks
+     ============================================================ */
+  const dashView = document.getElementById('dashView');
+  const bookView = document.getElementById('bookView');
+  const shelf = document.getElementById('shelf');
+  const emptyNote = document.getElementById('emptyNote');
+
+  function starStr(n) { return n ? '&#9733;'.repeat(n) : ''; }
+
+  function bookHtml(id) {
+    const b = db.books[id];
+    const f = b.fields || {};
+    const title = esc(f.title) || 'untitled book';
+    const tip = title +
+      (f.author ? ' by ' + esc(f.author) : '') +
+      ' - me: ' + ((b.stars && b.stars.rating_me) || 0) + ', bestie: ' +
+      ((b.stars && b.stars.rating_fr) || 0);
+    const inner = b.cover
+      ? '<img src="' + b.cover + '" alt="">'
+      : '<div class="book-front">' +
+          '<span class="bf-deco">&#10086;&#10086;&#10086;</span>' +
+          '<span class="bf-title">' + title + '</span>' +
+          '<span class="bf-stars">' + (starStr(b.stars && b.stars.rating_main) || '&nbsp;') + '</span>' +
+        '</div>';
+    return '<div class="shelf-book" data-id="' + id + '" title="' + tip + '">' +
+             '<button class="del" data-del="' + id + '" title="Delete this book">&#10006;</button>' +
+             inner +
+           '</div>';
+  }
+
+  function renderShelf() {
+    emptyNote.style.display = db.order.length ? 'none' : 'block';
+
+    /* how many books fit per plank at the current width */
+    const w = shelf.clientWidth || 800;
+    const slot = window.innerWidth <= 760 ? 102 : 128; /* book width + gap */
+    const per = Math.max(2, Math.floor(w / slot));
+
+    const items = db.order.map(bookHtml);
+    items.push('<div class="add-book" id="addCard"><span class="plus">&#10010;</span><span>add a<br>new book</span></div>');
+
+    const rows = [];
+    for (let i = 0; i < items.length; i += per) rows.push(items.slice(i, i + per));
+    while (rows.length < 2) rows.push([]); /* keep an empty plank for coziness */
+
+    shelf.innerHTML = rows.map(r => '<div class="shelf-row">' + r.join('') + '</div>').join('');
+    renderStats();
+  }
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    if (currentId) return; /* only re-flow while the shelf is visible */
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderShelf, 150);
+  });
+
+  shelf.addEventListener('click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      e.stopPropagation();
+      const id = del.dataset.del;
+      const t = (db.books[id] && db.books[id].fields.title) || 'this book';
+      if (!confirm('Delete "' + t + '" from your shelf? This cannot be undone.')) return;
+      delete db.books[id];
+      db.order = db.order.filter(x => x !== id);
+      db.deleted = db.deleted || {};
+      db.deleted[id] = Date.now();
+      saveDB();
+      scheduleSync();
+      renderShelf();
+      return;
+    }
+    if (e.target.closest('#addCard')) { newBook(); return; }
+    const card = e.target.closest('.shelf-book');
+    if (card) openBook(card.dataset.id);
+  });
+
+  document.getElementById('newBookBtn').addEventListener('click', newBook);
+
+  function newBook() {
+    const id = 'b' + Date.now().toString(36);
+    db.books[id] = { fields: {}, stars: {}, chips: {}, cover: null, createdAt: Date.now(), updatedAt: Date.now() };
+    db.order.unshift(id);
+    saveDB();
+    openBook(id);
+  }
+
+  function showDash() {
+    currentId = null;
+    bookView.classList.add('hidden');
+    dashView.classList.remove('hidden');
+    renderShelf();
+    window.scrollTo(0, 0);
+  }
+
+  /* ============================================================
+     BOOK PAGE - bindings set up once; they read/write whichever
+     book is currently open
+     ============================================================ */
+  const fieldEls = [...document.querySelectorAll('[data-key]')];
+  const starBoxes = [...document.querySelectorAll('[data-stars]')];
+  const chipGroups = [...document.querySelectorAll('[data-chips]')];
+  const coverBox = document.getElementById('coverBox');
+  const coverImg = document.getElementById('coverImg');
+  const coverHint = document.getElementById('coverHint');
+  const coverInput = document.getElementById('coverInput');
+
+  fieldEls.forEach(el => {
+    el.addEventListener('input', () => {
+      if (!book()) return;
+      book().fields[el.dataset.key] = el.value;
+      book().updatedAt = Date.now();
+      autosave();
+    });
+  });
+
+  starBoxes.forEach(box => {
+    const key = box.dataset.stars;
+    for (let i = 1; i <= 5; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '★';
+      btn.setAttribute('aria-label', i + ' star' + (i > 1 ? 's' : ''));
+      btn.addEventListener('click', () => {
+        if (!book()) return;
+        book().stars[key] = (book().stars[key] === i) ? 0 : i; /* re-click clears */
+        book().updatedAt = Date.now();
+        paintStars(box);
+        autosave();
+      });
+      box.appendChild(btn);
+    }
+  });
+  function paintStars(box) {
+    const b = book();
+    const n = (b && b.stars[box.dataset.stars]) || 0;
+    [...box.children].forEach((btn, idx) => btn.classList.toggle('on', idx < n));
+  }
+
+  chipGroups.forEach(group => {
+    const key = group.dataset.chips;
+    [...group.children].forEach(chip => {
+      chip.type = 'button';
+      chip.addEventListener('click', () => {
+        if (!book()) return;
+        book().chips[key] = (book().chips[key] === chip.dataset.value) ? null : chip.dataset.value;
+        book().updatedAt = Date.now();
+        paintChips(group);
+        autosave();
+      });
+    });
+  });
+  function paintChips(group) {
+    const b = book();
+    const val = b && b.chips[group.dataset.chips];
+    [...group.children].forEach(c => c.classList.toggle('on', c.dataset.value === val));
+  }
+
+  const showCover = url => {
+    if (url) {
+      coverImg.src = url;
+      coverImg.style.display = 'block';
+      coverHint.style.display = 'none';
+    } else {
+      coverImg.style.display = 'none';
+      coverHint.style.display = 'block';
+    }
+  };
+  coverBox.addEventListener('click', () => coverInput.click());
+  coverInput.addEventListener('change', () => {
+    const file = coverInput.files[0];
+    if (!file || !book()) return;
+    const reader = new FileReader();
+    reader.onload = e => { book().cover = e.target.result; book().updatedAt = Date.now(); showCover(book().cover); saveDB(); scheduleSync(); };
+    reader.readAsDataURL(file);
+  });
+
+  function populate() {
+    const b = book();
+    fieldEls.forEach(el => el.value = b.fields[el.dataset.key] || '');
+    starBoxes.forEach(paintStars);
+    chipGroups.forEach(paintChips);
+    showCover(b.cover);
+    coverInput.value = '';
+  }
+
+  function openBook(id) {
+    currentId = id;
+    populate();
+    dashView.classList.add('hidden');
+    bookView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- toolbar ---------- */
+  const toast = document.getElementById('toast');
+  const showToast = msg => {
+    toast.innerHTML = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+  };
+
+  document.getElementById('backBtn').addEventListener('click', () => { saveDB(); showDash(); });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    saveDB();
+    showToast('review saved &#10084;');
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!book()) return;
+    if (!confirm('Clear everything on this page? This cannot be undone.')) return;
+    Object.assign(book(), { fields: {}, stars: {}, chips: {}, cover: null, updatedAt: Date.now() });
+    populate();
+    saveDB();
+    showToast('fresh page &#9998;');
+  });
+
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  /* ============================================================
+     SHARED SHELF SYNC
+     Talks to a free Supabase project over its REST API.
+     One row per "shelf code"; merge is last-write-wins per book.
+     Works offline: changes stay in localStorage and sync later.
+     ============================================================ */
+  const CFG_KEY = 'bookReviewJournal.sync';
+  let cfg = { url: '', key: '', code: '' };
+  try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(CFG_KEY)) || {}); } catch (e) { /* ignore */ }
+
+  const syncStatusEl = document.getElementById('syncStatus');
+  const setStatus = msg => { syncStatusEl.innerHTML = msg; };
+  const configured = () => !!(cfg.url && cfg.key && cfg.code);
+
+  document.getElementById('syncSetupBtn').addEventListener('click', () => {
+    const box = document.getElementById('syncSetup');
+    box.classList.toggle('hidden');
+    document.getElementById('cfgUrl').value = cfg.url;
+    document.getElementById('cfgKey').value = cfg.key;
+    document.getElementById('cfgCode').value = cfg.code;
+  });
+
+  document.getElementById('cfgSaveBtn').addEventListener('click', () => {
+    cfg.url = document.getElementById('cfgUrl').value.trim().replace(/\/+$/, '');
+    cfg.key = document.getElementById('cfgKey').value.trim();
+    cfg.code = document.getElementById('cfgCode').value.trim();
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+    document.getElementById('syncSetup').classList.add('hidden');
+    if (configured()) syncNow();
+    else setStatus('not connected &mdash; fill in all three fields to link up');
+  });
+
+  document.getElementById('syncNowBtn').addEventListener('click', () => syncNow());
+
+  /* merge a remote copy of the shelf into ours */
+  function mergeDb(remote) {
+    if (!remote || !remote.books) return;
+    db.deleted = db.deleted || {};
+    const rDel = remote.deleted || {};
+    Object.keys(rDel).forEach(id => {
+      if (!db.deleted[id] || rDel[id] > db.deleted[id]) db.deleted[id] = rDel[id];
+    });
+    Object.keys(remote.books).forEach(id => {
+      const rb = remote.books[id];
+      const lb = db.books[id];
+      if (!lb || (rb.updatedAt || 0) > (lb.updatedAt || 0)) db.books[id] = rb;
+    });
+    Object.keys(db.deleted).forEach(id => {
+      const b = db.books[id];
+      if (b && (b.updatedAt || 0) <= db.deleted[id]) delete db.books[id];
+    });
+    const seen = {};
+    const order = [];
+    db.order.concat(remote.order || []).forEach(id => {
+      if (db.books[id] && !seen[id]) { seen[id] = true; order.push(id); }
+    });
+    Object.keys(db.books).forEach(id => {
+      if (!seen[id]) { seen[id] = true; order.push(id); }
+    });
+    db.order = order;
+  }
+
+  let syncing = false;
+  async function syncNow() {
+    if (!configured()) {
+      setStatus('not connected &mdash; click "set up sharing" to link with your bestie &#10084;');
+      return;
+    }
+    if (syncing) return;
+    syncing = true;
+    setStatus('syncing...');
+    try {
+      const h = { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key, 'Content-Type': 'application/json' };
+      const url = cfg.url + '/rest/v1/shelves';
+      const res = await fetch(url + '?id=eq.' + encodeURIComponent(cfg.code) + '&select=data', { headers: h });
+      if (!res.ok) throw new Error('server said ' + res.status);
+      const rows = await res.json();
+      if (rows.length) mergeDb(rows[0].data);
+      const up = await fetch(url, {
+        method: 'POST',
+        headers: Object.assign({ Prefer: 'resolution=merge-duplicates' }, h),
+        body: JSON.stringify([{ id: cfg.code, data: db, updated_at: new Date().toISOString() }])
+      });
+      if (!up.ok) throw new Error('server said ' + up.status);
+      saveDB();
+      if (currentId) { if (book()) populate(); else showDash(); }
+      else renderShelf();
+      setStatus('shared shelf synced &#10084; code: ' + esc(cfg.code));
+    } catch (err) {
+      setStatus('could not reach the shared shelf &mdash; changes are saved here and will sync later');
+    }
+    syncing = false;
+  }
+
+  let pushTimer;
+  function scheduleSync() {
+    if (!configured()) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(syncNow, 2500);
+  }
+  /* gentle background sync while the page is open */
+  setInterval(() => { if (configured() && !document.hidden) syncNow(); }, 30000);
+
+  /* ---------- boot ---------- */
+  applyTheme();
+  showDash();
+  if (configured()) syncNow();
+  else setStatus('not connected &mdash; click "set up sharing" to link with your bestie &#10084;');
+})();
+</script>
+</body>
+</html>

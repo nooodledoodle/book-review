@@ -1523,6 +1523,195 @@
     color: #fff7f0;
   }
   #shelfModeBar .btn.active:hover { filter: brightness(1.06); }
+
+
+  /* ============================================================
+     COVER CROPPER + CLEAN PRINT EXPORT
+     ============================================================ */
+  .cover-tools {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: -8px 0 18px;
+  }
+  .cover-tools .btn {
+    padding: 7px 12px;
+    font-size: .72rem;
+  }
+  .cover-box.has-cover .hint-text { display: none; }
+
+  .crop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(94, 50, 50, .38);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 5vh 16px 20px;
+    overflow-y: auto;
+  }
+  .crop-modal {
+    width: min(640px, 96vw);
+    background: var(--bg);
+    border: 2.5px dashed var(--line);
+    border-radius: 12px;
+    box-shadow: 8px 10px 0 rgba(60, 30, 30, .25);
+    padding: 16px 18px 2px;
+    background-image:
+      radial-gradient(rgba(94,50,50,.05) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.2px);
+    background-size: 5px 5px, 9px 9px;
+  }
+  .crop-help {
+    font-family: var(--type);
+    color: var(--line);
+    text-align: center;
+    letter-spacing: .06em;
+    font-size: .78rem;
+    margin: -4px 0 12px;
+  }
+  .crop-stage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 8px auto 14px;
+  }
+  #cropPreview {
+    width: min(330px, 78vw);
+    height: auto;
+    aspect-ratio: 3 / 4;
+    background: var(--cream);
+    border: 2.5px dashed var(--line);
+    border-radius: 8px;
+    box-shadow: 4px 5px 0 rgba(94, 50, 50, .11);
+  }
+  .crop-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 8px 0 14px;
+  }
+  .crop-control {
+    display: grid;
+    gap: 6px;
+    font-family: var(--type);
+    font-weight: 700;
+    color: var(--ink-dark);
+    font-size: .76rem;
+    letter-spacing: .08em;
+    background: var(--cream);
+    border: 1.5px dashed var(--line);
+    border-radius: 9px;
+    padding: 9px 11px;
+    box-shadow: 2px 2px 0 rgba(94, 50, 50, .08);
+  }
+  .crop-control input[type="range"] {
+    width: 100%;
+    accent-color: var(--star-on);
+  }
+  .crop-toolbar { margin-bottom: 12px; }
+
+  @media (max-width: 680px) {
+    .crop-controls { grid-template-columns: 1fr; }
+  }
+
+  @page { size: letter portrait; margin: 0.35in; }
+  @media print {
+    html, body {
+      width: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      background: var(--bg) !important;
+    }
+    .page {
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      animation: none !important;
+    }
+    .app-topbar, .mode-helper, .userbar, .toolbar, .toast, .no-print,
+    .theme-dots, #dashView, .settings-overlay, .crop-overlay, #heartField {
+      display: none !important;
+    }
+    #appShell, #bookView {
+      display: block !important;
+    }
+    #bookView.hidden {
+      display: block !important;
+    }
+    .layout {
+      display: grid !important;
+      grid-template-columns: 2.25in 1fr !important;
+      gap: .22in !important;
+      align-items: start !important;
+    }
+    .reviewers {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: .18in !important;
+      margin-bottom: .12in !important;
+    }
+    .solo-mode .reviewers { grid-template-columns: 1fr !important; }
+    .frame {
+      margin: .14in 0 !important;
+      padding: .16in .14in .12in !important;
+      box-shadow: none !important;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .frame::after, .auth-card::before, body::before, body::after {
+      display: none !important;
+    }
+    .frame > .frame-label {
+      position: static !important;
+      display: inline-block !important;
+      margin: -.02in 0 .08in !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    .fieldrow {
+      padding: .07in .1in !important;
+      margin-bottom: .07in !important;
+      box-shadow: none !important;
+    }
+    .cover-box {
+      max-width: 2.05in !important;
+      margin: 0 auto .12in !important;
+      box-shadow: none !important;
+      break-inside: avoid;
+    }
+    .stars {
+      padding: .06in !important;
+      margin-bottom: .1in !important;
+      box-shadow: none !important;
+    }
+    input, select, textarea {
+      font-size: 9.5pt !important;
+      color: var(--ink) !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    textarea {
+      overflow: visible !important;
+      resize: none !important;
+      min-height: 1in !important;
+    }
+    textarea[rows="4"] { min-height: .75in !important; }
+    textarea[rows="5"] { min-height: .9in !important; }
+    textarea[rows="8"] { min-height: 1.25in !important; }
+    .divider-heart {
+      margin: .08in 0 .16in !important;
+      font-size: 8pt !important;
+    }
+    .chip {
+      padding: .035in .08in !important;
+      box-shadow: none !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1617,7 +1806,6 @@
   <div id="bookView" class="hidden">
     <div class="toolbar">
       <button class="btn" id="backBtn">&#8592; Back to Shelf</button>
-      <button class="btn" id="saveBtn">&#10084; Save Review</button>
       <button class="btn danger" id="clearBtn">&#10006; Clear Page</button>
       <button class="btn" id="printBtn">&#9113; Print / Save as PDF</button>
     </div>
@@ -1630,6 +1818,10 @@
           <img id="coverImg" alt="" style="display:none">
         </div>
         <input type="file" id="coverInput" accept="image/*" style="display:none">
+        <div class="cover-tools no-print">
+          <button class="btn cover-action" id="changeCoverBtn" type="button">Change Cover</button>
+          <button class="btn cover-action hidden" id="recropCoverBtn" type="button">Crop Cover</button>
+        </div>
 
         <div class="stars" data-stars="rating_main" aria-label="Overall rating"></div>
 
@@ -1750,6 +1942,35 @@
     </div>
   </div>
 
+</div>
+
+<div class="crop-overlay hidden no-print" id="cropOverlay" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="crop-modal">
+    <div class="settings-head">
+      <span class="settings-title" id="cropTitle">&#9998; crop book cover</span>
+      <button class="btn" id="cropCloseBtn" type="button">&#10006; close</button>
+    </div>
+    <p class="crop-help">move the image until the cover shows the right part, then use the crop.</p>
+    <div class="crop-stage">
+      <canvas id="cropPreview" width="600" height="800" aria-label="book cover crop preview"></canvas>
+    </div>
+    <div class="crop-controls">
+      <label class="crop-control">Zoom
+        <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
+      </label>
+      <label class="crop-control">Left / Right
+        <input type="range" id="cropX" min="-100" max="100" step="1" value="0">
+      </label>
+      <label class="crop-control">Up / Down
+        <input type="range" id="cropY" min="-100" max="100" step="1" value="0">
+      </label>
+    </div>
+    <div class="toolbar crop-toolbar">
+      <button class="btn" id="cropResetBtn" type="button">Reset</button>
+      <button class="btn danger" id="cropCancelBtn" type="button">Cancel</button>
+      <button class="btn" id="cropApplyBtn" type="button">Use Crop</button>
+    </div>
+  </div>
 </div>
 
 <div class="settings-overlay hidden" id="settingsOverlay">
@@ -2498,6 +2719,17 @@
   const coverImg = document.getElementById('coverImg');
   const coverHint = document.getElementById('coverHint');
   const coverInput = document.getElementById('coverInput');
+  const changeCoverBtn = document.getElementById('changeCoverBtn');
+  const recropCoverBtn = document.getElementById('recropCoverBtn');
+  const cropOverlay = document.getElementById('cropOverlay');
+  const cropPreview = document.getElementById('cropPreview');
+  const cropZoom = document.getElementById('cropZoom');
+  const cropX = document.getElementById('cropX');
+  const cropY = document.getElementById('cropY');
+  const cropApplyBtn = document.getElementById('cropApplyBtn');
+  const cropCancelBtn = document.getElementById('cropCancelBtn');
+  const cropCloseBtn = document.getElementById('cropCloseBtn');
+  const cropResetBtn = document.getElementById('cropResetBtn');
   const reviewerOneLabel = document.getElementById('reviewerOneLabel');
   const reviewerTwoLabel = document.getElementById('reviewerTwoLabel');
   const reviewerOneCard = document.getElementById('reviewerOneCard');
@@ -2638,20 +2870,119 @@
       coverImg.src = url;
       coverImg.style.display = 'block';
       coverHint.style.display = 'none';
+      coverBox.classList.add('has-cover');
+      if (recropCoverBtn) recropCoverBtn.classList.remove('hidden');
     } else {
       coverImg.style.display = 'none';
       coverHint.style.display = 'block';
+      coverBox.classList.remove('has-cover');
+      if (recropCoverBtn) recropCoverBtn.classList.add('hidden');
     }
   };
-  coverBox.addEventListener('click', () => coverInput.click());
+
+  let cropImage = null;
+  let cropSourceData = null;
+
+  function closeCropper() {
+    if (cropOverlay) cropOverlay.classList.add('hidden');
+    cropImage = null;
+    cropSourceData = null;
+    if (coverInput) coverInput.value = '';
+  }
+
+  function drawCropPreview() {
+    if (!cropImage || !cropPreview) return;
+    const ctx = cropPreview.getContext('2d');
+    const cw = cropPreview.width;
+    const ch = cropPreview.height;
+    const zoom = Number(cropZoom && cropZoom.value) || 1;
+    const xPct = (Number(cropX && cropX.value) || 0) / 100;
+    const yPct = (Number(cropY && cropY.value) || 0) / 100;
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cream').trim() || '#fdf6ec';
+    ctx.fillRect(0, 0, cw, ch);
+
+    const baseScale = Math.max(cw / cropImage.naturalWidth, ch / cropImage.naturalHeight);
+    const scale = baseScale * zoom;
+    const drawW = cropImage.naturalWidth * scale;
+    const drawH = cropImage.naturalHeight * scale;
+    const maxX = Math.max(0, (drawW - cw) / 2);
+    const maxY = Math.max(0, (drawH - ch) / 2);
+    const dx = (cw - drawW) / 2 + (xPct * maxX);
+    const dy = (ch - drawH) / 2 + (yPct * maxY);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(cropImage, dx, dy, drawW, drawH);
+  }
+
+  function resetCropControls() {
+    if (cropZoom) cropZoom.value = '1';
+    if (cropX) cropX.value = '0';
+    if (cropY) cropY.value = '0';
+    drawCropPreview();
+  }
+
+  function openCropper(src) {
+    if (!src || !cropOverlay || !cropPreview) return;
+    cropSourceData = src;
+    cropImage = new Image();
+    cropImage.onload = () => {
+      resetCropControls();
+      cropOverlay.classList.remove('hidden');
+      drawCropPreview();
+    };
+    cropImage.src = src;
+  }
+
+  function selectCoverImage() {
+    if (coverInput) coverInput.click();
+  }
+
+  coverBox.addEventListener('click', selectCoverImage);
+  if (changeCoverBtn) changeCoverBtn.addEventListener('click', selectCoverImage);
+  if (recropCoverBtn) recropCoverBtn.addEventListener('click', () => {
+    const b = book();
+    if (!b) return;
+    openCropper(b.coverSource || b.cover);
+  });
+
+  [cropZoom, cropX, cropY].forEach(input => {
+    if (input) input.addEventListener('input', drawCropPreview);
+  });
+  if (cropResetBtn) cropResetBtn.addEventListener('click', resetCropControls);
+  if (cropCancelBtn) cropCancelBtn.addEventListener('click', closeCropper);
+  if (cropCloseBtn) cropCloseBtn.addEventListener('click', closeCropper);
+  if (cropOverlay) cropOverlay.addEventListener('click', e => { if (e.target === cropOverlay) closeCropper(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && cropOverlay && !cropOverlay.classList.contains('hidden')) closeCropper();
+  });
+  if (cropApplyBtn) cropApplyBtn.addEventListener('click', () => {
+    if (!book() || !cropPreview || !cropImage) return;
+    drawCropPreview();
+    const cropped = cropPreview.toDataURL('image/jpeg', 0.92);
+    book().cover = cropped;
+    book().coverSource = cropSourceData;
+    book().coverCrop = {
+      zoom: Number(cropZoom && cropZoom.value) || 1,
+      x: Number(cropX && cropX.value) || 0,
+      y: Number(cropY && cropY.value) || 0
+    };
+    book().updatedAt = Date.now();
+    showCover(book().cover);
+    closeCropper();
+    saveDB();
+    scheduleSync();
+    showToast('cover cropped \u2764');
+  });
+
   coverInput.addEventListener('change', () => {
     const file = coverInput.files[0];
     if (!file || !book()) return;
     const reader = new FileReader();
-    reader.onload = e => { book().cover = e.target.result; book().updatedAt = Date.now(); showCover(book().cover); saveDB(); scheduleSync(); };
+    reader.onload = e => openCropper(e.target.result);
     reader.readAsDataURL(file);
   });
-
   function populate() {
     const b = book();
     saveCurrentReaderName();
@@ -2682,16 +3013,6 @@
 
   document.getElementById('backBtn').addEventListener('click', () => { saveDB(); showDash(); });
 
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    if (!book() || !hasBookContent(book())) {
-      showToast('add book info first &#9998;');
-      return;
-    }
-    ensureCurrentBookSaved();
-    saveDB();
-    showToast('review saved &#10084;');
-  });
-
   document.getElementById('clearBtn').addEventListener('click', () => {
     if (!book()) return;
     if (!confirm('Clear everything on this page? This cannot be undone.')) return;
@@ -2701,7 +3022,26 @@
     showToast('fresh page &#9998;');
   });
 
-  document.getElementById('printBtn').addEventListener('click', () => window.print());
+  function preparePrintLayout() {
+    document.querySelectorAll('#bookView textarea').forEach(ta => {
+      if (!ta.dataset.originalHeight) ta.dataset.originalHeight = ta.style.height || '';
+      ta.style.height = Math.max(ta.scrollHeight, ta.offsetHeight, 96) + 'px';
+    });
+  }
+
+  function restorePrintLayout() {
+    document.querySelectorAll('#bookView textarea').forEach(ta => {
+      ta.style.height = ta.dataset.originalHeight || '';
+      delete ta.dataset.originalHeight;
+    });
+  }
+
+  window.addEventListener('beforeprint', preparePrintLayout);
+  window.addEventListener('afterprint', restorePrintLayout);
+  document.getElementById('printBtn').addEventListener('click', () => {
+    preparePrintLayout();
+    setTimeout(() => window.print(), 50);
+  });
 
   /* ============================================================
      LOCKED SHARED SHELF SYNC

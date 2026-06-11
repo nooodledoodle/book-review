@@ -3060,6 +3060,12 @@
     return bookGenres(b).join(', ');
   }
 
+  function bookHasGenre(b, selectedGenre) {
+    const wanted = String(selectedGenre || '').trim().toLowerCase();
+    if (!wanted) return true;
+    return bookGenres(b).some(g => String(g || '').trim().toLowerCase() === wanted);
+  }
+
   function bookTitleForSort(b) {
     return String((b && b.fields && b.fields.title) || 'untitled book').trim().toLowerCase();
   }
@@ -3093,7 +3099,7 @@
       const b = db.books[id];
       if (!b || !hasBookContent(b)) return false;
       if (b.shelfMode && b.shelfMode !== shelfMode) return false;
-      if (selectedGenre && bookGenre(b) !== selectedGenre) return false;
+      if (!bookHasGenre(b, selectedGenre)) return false;
       return true;
     });
 

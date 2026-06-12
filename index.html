@@ -1580,9 +1580,10 @@
     margin: 8px auto 14px;
   }
   #cropPreview {
-    width: min(330px, 78vw);
+    width: min(318px, 78vw);
     height: auto;
-    aspect-ratio: 3 / 4;
+    /* Match the exact cover shape used in the book page and bookshelf. */
+    aspect-ratio: 106 / 148;
     background: var(--cream);
     border: 2.5px dashed var(--line);
     border-radius: 8px;
@@ -2145,6 +2146,40 @@
     }
   }
 
+
+
+  /* ============================================================
+     MULTIPLE SHARED BOOKSHELVES
+     ============================================================ */
+  .shared-shelf-picker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 4px 0 14px;
+  }
+  .shared-shelf-picker .shelf-control {
+    margin: 0;
+  }
+  .shared-shelf-picker select {
+    min-width: 230px;
+  }
+  .current-shelf-note {
+    font-family: var(--type);
+    color: var(--line);
+    text-align: center;
+    letter-spacing: .08em;
+    font-size: .76rem;
+    margin: -2px 0 12px;
+  }
+  @media (max-width: 640px) {
+    .shared-shelf-picker { align-items: stretch; }
+    .shared-shelf-picker .shelf-control,
+    .shared-shelf-picker .btn { width: 100%; justify-content: center; }
+    .shared-shelf-picker select { min-width: 0; width: 100%; }
+  }
+
 </style>
 </head>
 <body>
@@ -2407,9 +2442,9 @@
       <span class="settings-title" id="cropTitle">&#9998; crop book cover</span>
       <button class="btn" id="cropCloseBtn" type="button">&#10006; close</button>
     </div>
-    <p class="crop-help">move the image until the cover shows the right part, then use the crop.</p>
+    <p class="crop-help">this preview now matches exactly what will show as the book cover and shelf art.</p>
     <div class="crop-stage">
-      <canvas id="cropPreview" width="600" height="800" aria-label="book cover crop preview"></canvas>
+      <canvas id="cropPreview" width="636" height="888" aria-label="book cover crop preview"></canvas>
     </div>
     <div class="crop-controls">
       <label class="crop-control">Zoom
@@ -2439,6 +2474,16 @@
     <div class="frame no-print shared-only" id="sharedShelfTools">
       <span class="frame-label">Shared Shelf</span>
       <p class="sync-status" id="syncStatus">not connected &mdash; reviews only live in this browser</p>
+      <div class="shared-shelf-picker" id="sharedShelfPicker">
+        <label class="shelf-control">Active shelf:
+          <select id="sharedShelfSelect">
+            <option value="">No shared shelf selected</option>
+          </select>
+        </label>
+        <button class="btn" id="renameSharedShelfBtn" type="button">Rename Shelf</button>
+        <button class="btn danger" id="forgetSharedShelfBtn" type="button">Forget Shelf</button>
+      </div>
+      <p class="current-shelf-note" id="currentShelfNote">create or join a shared shelf to start</p>
       <div class="toolbar" style="margin-bottom:10px">
         <button class="btn" id="createInviteBtn">&#10084; Create Locked Invite</button>
         <button class="btn" id="copyInviteBtn">Copy Invite Link</button>
@@ -2508,7 +2553,7 @@
   const SUPABASE_URL = 'https://fltddfytlvedtxkpntvd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsdGRkZnl0bHZlZHR4a3BudHZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNTE4OTUsImV4cCI6MjA5NjYyNzg5NX0.nkSscmB3xVxCsXL5yFS_0-JSwCwFOesx4o6tOB9BB1E';
 
-  let cfg = { code: '', owner_id: '', friend_id: '' };
+  let cfg = { code: '', owner_id: '', friend_id: '', shelves: [] };
   let auth = null;
   let cachedReaderNames = {};
   try {
@@ -2516,11 +2561,27 @@
     cfg.code = savedCfg.code || '';
     cfg.owner_id = savedCfg.owner_id || '';
     cfg.friend_id = savedCfg.friend_id || '';
+    cfg.shelves = Array.isArray(savedCfg.shelves) ? savedCfg.shelves : [];
+    if (cfg.code && !cfg.shelves.some(sh => sh && sh.code === cfg.code)) {
+      cfg.shelves.push({
+        code: cfg.code,
+        name: savedCfg.name || 'Shared Shelf',
+        owner_id: cfg.owner_id || '',
+        friend_id: cfg.friend_id || '',
+        updatedAt: Date.now()
+      });
+    }
   } catch (e) { /* ignore */ }
   try { auth = JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { auth = null; }
   try { cachedReaderNames = JSON.parse(localStorage.getItem(READER_NAMES_KEY)) || {}; } catch (e) { cachedReaderNames = {}; }
 
   const incomingCode = parseShelfCode(window.location.href);
+  if (incomingCode) {
+    cfg.code = incomingCode;
+    if (!cfg.shelves.some(sh => sh && sh.code === incomingCode)) {
+      cfg.shelves.push({ code: incomingCode, name: 'Shared Shelf', owner_id: '', friend_id: '', updatedAt: Date.now() });
+    }
+  }
   let shelfMode = localStorage.getItem(MODE_KEY) || 'solo';
   if (incomingCode) shelfMode = 'shared';
   if (!['solo', 'shared'].includes(shelfMode)) shelfMode = 'solo';
@@ -2964,7 +3025,7 @@
         ? 'your private shelf is only for your own reviews'
         : 'your shared shelf is locked to two readers and has both reviews';
     }
-    if (bookcaseLabel) bookcaseLabel.textContent = shelfMode === 'solo' ? 'My Bookshelf' : 'Shared Bookshelf';
+    if (bookcaseLabel) bookcaseLabel.textContent = shelfMode === 'solo' ? 'My Bookshelf' : activeSharedShelfTitle();
     if (emptyNote) emptyNote.innerHTML = shelfMode === 'solo'
       ? 'your shelf is empty... add your first book &#10084;'
       : 'your shared shelf is empty... add your first book together &#10084;';
@@ -3060,12 +3121,6 @@
     return bookGenres(b).join(', ');
   }
 
-  function bookHasGenre(b, selectedGenre) {
-    const wanted = String(selectedGenre || '').trim().toLowerCase();
-    if (!wanted) return true;
-    return bookGenres(b).some(g => String(g || '').trim().toLowerCase() === wanted);
-  }
-
   function bookTitleForSort(b) {
     return String((b && b.fields && b.fields.title) || 'untitled book').trim().toLowerCase();
   }
@@ -3099,7 +3154,7 @@
       const b = db.books[id];
       if (!b || !hasBookContent(b)) return false;
       if (b.shelfMode && b.shelfMode !== shelfMode) return false;
-      if (!bookHasGenre(b, selectedGenre)) return false;
+      if (selectedGenre && !bookGenres(b).includes(selectedGenre)) return false;
       return true;
     });
 
@@ -3816,17 +3871,152 @@
     return u.toString();
   }
 
+  function normalizeShelfEntry(entry) {
+    if (!entry) return null;
+    const code = parseShelfCode(entry.code || entry.id || entry);
+    if (!code) return null;
+    return {
+      code,
+      name: String(entry.name || entry.shelfName || '').trim(),
+      owner_id: entry.owner_id || '',
+      friend_id: entry.friend_id || '',
+      updatedAt: Number(entry.updatedAt || Date.now())
+    };
+  }
+
+  function ensureShelfList() {
+    const seen = {};
+    cfg.shelves = (Array.isArray(cfg.shelves) ? cfg.shelves : [])
+      .map(normalizeShelfEntry)
+      .filter(Boolean)
+      .filter(sh => {
+        if (seen[sh.code]) return false;
+        seen[sh.code] = true;
+        return true;
+      });
+    if (cfg.code && !seen[cfg.code]) {
+      cfg.shelves.unshift({
+        code: cfg.code,
+        name: 'Shared Shelf',
+        owner_id: cfg.owner_id || '',
+        friend_id: cfg.friend_id || '',
+        updatedAt: Date.now()
+      });
+    }
+    return cfg.shelves;
+  }
+
+  function currentShelfEntry() {
+    return ensureShelfList().find(sh => sh.code === cfg.code) || null;
+  }
+
+  function shelfNameFromRow(row, fallbackCode) {
+    const data = row && row.data;
+    const entry = ensureShelfList().find(sh => sh.code === (row && row.id || fallbackCode));
+    return String(
+      (data && (data.shelfName || (data.meta && data.meta.shelfName))) ||
+      (entry && entry.name) ||
+      ''
+    ).trim();
+  }
+
+  function sharedShelfDisplayName(entry, index) {
+    if (!entry) return 'Shared Shelf';
+    if (entry.name) return entry.name;
+    const owner = titleCaseName(readerName(entry.owner_id, ''));
+    const friend = titleCaseName(readerName(entry.friend_id, ''));
+    if (owner && friend) return owner + ' + ' + friend;
+    return 'Shared Shelf ' + (index + 1);
+  }
+
+  function activeSharedShelfTitle() {
+    const entry = currentShelfEntry();
+    return entry ? sharedShelfDisplayName(entry, ensureShelfList().indexOf(entry)) : 'Shared Bookshelf';
+  }
+
+  function addKnownShelf(code, row, name) {
+    code = parseShelfCode(code || (row && row.id));
+    if (!code) return null;
+    const shelves = ensureShelfList();
+    let entry = shelves.find(sh => sh.code === code);
+    const rowName = shelfNameFromRow(row, code);
+    if (!entry) {
+      entry = { code, name: '', owner_id: '', friend_id: '', updatedAt: Date.now() };
+      shelves.unshift(entry);
+    }
+    if (name || rowName) entry.name = String(name || rowName).trim();
+    if (row) {
+      entry.owner_id = row.owner_id || entry.owner_id || '';
+      entry.friend_id = row.friend_id || entry.friend_id || '';
+    }
+    entry.updatedAt = Date.now();
+    cfg.code = code;
+    cfg.owner_id = entry.owner_id || cfg.owner_id || '';
+    cfg.friend_id = entry.friend_id || cfg.friend_id || '';
+    cfg.shelves = shelves;
+    return entry;
+  }
+
+  function updateSharedShelfSelect() {
+    const select = document.getElementById('sharedShelfSelect');
+    const note = document.getElementById('currentShelfNote');
+    const renameBtn = document.getElementById('renameSharedShelfBtn');
+    const forgetBtn = document.getElementById('forgetSharedShelfBtn');
+    if (!select) return;
+    const shelves = ensureShelfList();
+    select.innerHTML = '<option value="">No shared shelf selected</option>' + shelves.map((sh, idx) => {
+      const label = sharedShelfDisplayName(sh, idx);
+      return '<option value="' + esc(sh.code) + '">' + esc(label) + '</option>';
+    }).join('');
+    select.value = cfg.code || '';
+    if (note) {
+      const entry = currentShelfEntry();
+      note.innerHTML = entry
+        ? 'current shelf: <strong>' + esc(sharedShelfDisplayName(entry, shelves.indexOf(entry))) + '</strong>'
+        : 'create or join a shared shelf to start';
+    }
+    if (renameBtn) renameBtn.disabled = !cfg.code;
+    if (forgetBtn) forgetBtn.disabled = !cfg.code;
+  }
+
+  async function switchToSharedShelf(code, shouldSync = true) {
+    code = parseShelfCode(code);
+    if (!code) return;
+    if (code === cfg.code && shelfMode === 'shared') {
+      updateInviteUI(activeShelfRow);
+      return;
+    }
+    saveDB();
+    currentId = null;
+    shelfMode = 'shared';
+    localStorage.setItem(MODE_KEY, shelfMode);
+    const entry = ensureShelfList().find(sh => sh.code === code) || addKnownShelf(code, null, 'Shared Shelf');
+    cfg.code = code;
+    cfg.owner_id = entry.owner_id || '';
+    cfg.friend_id = entry.friend_id || '';
+    activeShelfRow = cfg.owner_id || cfg.friend_id ? { id: code, owner_id: cfg.owner_id || null, friend_id: cfg.friend_id || null } : null;
+    saveCfg();
+    loadDB();
+    updateShelfModeUI();
+    updateInviteUI(activeShelfRow);
+    updateReviewModeUI();
+    showDash();
+    if (shouldSync) await syncNow();
+  }
+
   function saveCfg() {
+    ensureShelfList();
     localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
   }
 
   function updateInviteUI(row) {
     if (row) {
       activeShelfRow = row;
-      cfg.owner_id = row.owner_id || cfg.owner_id || '';
-      cfg.friend_id = row.friend_id || cfg.friend_id || '';
+      addKnownShelf(row.id || cfg.code, row);
       saveCfg();
       loadReaderNamesForShelf(row);
+    } else if (cfg.code) {
+      addKnownShelf(cfg.code, activeShelfRow);
     }
     const hasCode = !!cfg.code;
     inviteCodeText.textContent = hasCode ? cfg.code : 'not created yet';
@@ -3835,10 +4025,12 @@
     document.getElementById('copyCodeBtn').disabled = !hasCode;
     if (inviteLockPill) {
       if (!hasCode) inviteLockPill.textContent = 'two-person shelf';
-      else if (row && row.owner_id && row.friend_id) inviteLockPill.textContent = 'locked to 2 readers';
+      else if (activeShelfRow && activeShelfRow.owner_id && activeShelfRow.friend_id) inviteLockPill.textContent = 'locked to 2 readers';
       else inviteLockPill.textContent = 'waiting for 1 friend';
     }
     if (hasCode) invitePanel.classList.remove('hidden');
+    updateSharedShelfSelect();
+    if (bookcaseLabel && shelfMode === 'shared') bookcaseLabel.textContent = activeSharedShelfTitle();
   }
 
   async function copyText(value, successMsg) {
@@ -3888,17 +4080,23 @@
   }
 
   async function joinLockedShelf(code) {
+    code = parseShelfCode(code);
+    if (!code) throw new Error('Invite code not found.');
+    saveDB();
     shelfMode = 'shared';
     localStorage.setItem(MODE_KEY, shelfMode);
+    cfg.code = code;
+    saveCfg();
     const row = await sharedFetch('/rest/v1/rpc/join_shared_shelf', {
       method: 'POST',
       body: JSON.stringify({ p_code: code })
     });
     activeShelfRow = row;
-    if (row && row.data) mergeDb(row.data);
-    cfg.code = code;
-    saveCurrentReaderName();
+    addKnownShelf(code, row);
     saveCfg();
+    loadDB();
+    if (row && row.data) mergeDb(row.data);
+    saveCurrentReaderName();
     saveDB();
     updateShelfModeUI();
     updateInviteUI(row);
@@ -3907,29 +4105,54 @@
   }
 
   async function createLockedShelf() {
+    saveDB();
     shelfMode = 'shared';
     localStorage.setItem(MODE_KEY, shelfMode);
     updateShelfModeUI();
     saveCurrentReaderName();
+
+    const defaultName = 'Shared Shelf ' + (ensureShelfList().length + 1);
+    const chosenName = prompt('Name this shared bookshelf:', defaultName);
+    const shelfName = String(chosenName === null ? defaultName : (chosenName || defaultName)).trim() || defaultName;
+
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = makeInviteCode();
+      const newData = Object.assign(blankDb(), {
+        shelfMode: 'shared',
+        theme: getGlobalTheme(),
+        shelfName,
+        meta: { shelfName },
+        books: {},
+        order: [],
+        deleted: {},
+        readerNames: {}
+      });
+      if (signedIn()) newData.readerNames[auth.user.id] = displayNameFromUser(auth.user);
       try {
+        cfg.code = code;
+        cfg.owner_id = auth.user.id;
+        cfg.friend_id = '';
+        activeShelfRow = { id: code, owner_id: auth.user.id, friend_id: null, data: newData };
+        db = newData;
+        saveCfg();
         const rows = await sharedFetch('/rest/v1/shared_shelves', {
           method: 'POST',
           headers: { Prefer: 'return=representation' },
           body: JSON.stringify({
             id: code,
             owner_id: auth.user.id,
-            data: db,
+            data: newData,
             updated_at: new Date().toISOString()
           })
         });
         const row = Array.isArray(rows) ? rows[0] : rows;
         activeShelfRow = row;
-        cfg.code = code;
+        addKnownShelf(code, row, shelfName);
         saveCfg();
+        saveDB();
         updateInviteUI(row);
         updateReviewModeUI();
+        renderShelf();
         return row;
       } catch (err) {
         if (/duplicate|23505/i.test(String(err.message || err)) && attempt < 4) continue;
@@ -3960,25 +4183,75 @@
     if (!signedIn()) { setStatus('sign in first to create a locked invite &#10084;'); return; }
     if (shelfMode !== 'shared') setShelfMode('shared');
     try {
-      if (cfg.code) {
-        const makeNew = confirm('You already have a shared shelf code. Create a brand new locked shelf instead? Choose Cancel to keep using the current one.');
-        if (!makeNew) {
-          updateInviteUI();
-          await syncNow();
-          return;
-        }
-        cfg.code = '';
-        saveCfg();
-        updateInviteUI();
-      }
-      setStatus('creating locked invite...');
+      setStatus('creating a new locked shared shelf...');
       const row = await createLockedShelf();
       updateInviteUI(row);
-      setStatus('locked invite ready &#10084; send it to one friend');
+      showDash();
+      setStatus('new locked invite ready &#10084; send it to one friend');
     } catch (err) {
       setStatus(friendlySyncError(err));
     }
   });
+
+  const sharedShelfSelectEl = document.getElementById('sharedShelfSelect');
+  if (sharedShelfSelectEl) {
+    sharedShelfSelectEl.addEventListener('change', async () => {
+      const code = sharedShelfSelectEl.value;
+      if (!code) return;
+      try {
+        setStatus('switching shared shelf...');
+        await switchToSharedShelf(code, true);
+      } catch (err) {
+        setStatus(friendlySyncError(err));
+      }
+    });
+  }
+
+  const renameSharedShelfBtn = document.getElementById('renameSharedShelfBtn');
+  if (renameSharedShelfBtn) {
+    renameSharedShelfBtn.addEventListener('click', () => {
+      const entry = currentShelfEntry();
+      if (!entry) { setStatus('choose a shared shelf first'); return; }
+      const currentName = sharedShelfDisplayName(entry, ensureShelfList().indexOf(entry));
+      const next = prompt('Rename this shared bookshelf:', currentName);
+      if (next === null) return;
+      const name = String(next).trim();
+      if (!name) return;
+      entry.name = name;
+      db.shelfName = name;
+      db.meta = Object.assign({}, db.meta || {}, { shelfName: name });
+      saveCfg();
+      saveDB();
+      updateInviteUI(activeShelfRow);
+      updateShelfModeUI();
+      scheduleSync();
+      showToast('shelf renamed &#10084;');
+    });
+  }
+
+  const forgetSharedShelfBtn = document.getElementById('forgetSharedShelfBtn');
+  if (forgetSharedShelfBtn) {
+    forgetSharedShelfBtn.addEventListener('click', async () => {
+      const entry = currentShelfEntry();
+      if (!entry) return;
+      const label = sharedShelfDisplayName(entry, ensureShelfList().indexOf(entry));
+      if (!confirm('Forget "' + label + '" on this browser? This does not delete it for your friend.')) return;
+      saveDB();
+      cfg.shelves = ensureShelfList().filter(sh => sh.code !== entry.code);
+      const next = cfg.shelves[0] || null;
+      cfg.code = next ? next.code : '';
+      cfg.owner_id = next ? next.owner_id || '' : '';
+      cfg.friend_id = next ? next.friend_id || '' : '';
+      activeShelfRow = next ? { id: next.code, owner_id: next.owner_id || null, friend_id: next.friend_id || null } : null;
+      saveCfg();
+      loadDB();
+      updateInviteUI(activeShelfRow);
+      updateShelfModeUI();
+      showDash();
+      if (cfg.code) await syncNow();
+      else setStatus('shared shelf forgotten on this browser');
+    });
+  }
 
   document.getElementById('copyInviteBtn').addEventListener('click', () => {
     updateInviteUI();
@@ -4025,6 +4298,12 @@
   /* merge a remote copy of the shelf into ours */
   function mergeDb(remote) {
     if (!remote || !remote.books) return;
+    if (remote.shelfName || (remote.meta && remote.meta.shelfName)) {
+      db.shelfName = remote.shelfName || remote.meta.shelfName;
+      db.meta = Object.assign({}, db.meta || {}, { shelfName: db.shelfName });
+      const entry = currentShelfEntry();
+      if (entry && !entry.name) entry.name = db.shelfName;
+    }
     db.readerNames = Object.assign({}, remote.readerNames || {}, db.readerNames || {});
     saveCurrentReaderName();
     db.deleted = db.deleted || {};
